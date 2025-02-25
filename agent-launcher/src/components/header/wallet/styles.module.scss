@@ -11,12 +11,6 @@
     position: relative;
     font-family: var(--font-inter) !important;
 
-    * {
-      font-family: var(--font-inter) !important;
-    }
-
-    --menu-bg: transparent !important;
-
     &::before {
       content: '';
       background-color: transparent;
