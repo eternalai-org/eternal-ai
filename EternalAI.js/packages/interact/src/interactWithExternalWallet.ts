@@ -1,16 +1,17 @@
 import * as ethers from 'ethers';
-import { InferPayloadWithMessages, InferPayloadWithPrompt } from './types';
+import {
+  ExternalWallet,
+  InferPayloadWithMessages,
+  InferPayloadWithPrompt,
+} from './types';
 import * as methods from './methods';
 import { CHAIN_MAPPING, ChainId } from './constants';
+import { InteractWallet } from './methods/types';
 
-class Interact {
-  private _wallet: ethers.Wallet;
+class InteractWithExternalWallet {
+  private _wallet: ExternalWallet;
 
-  constructor(wallet: ethers.Wallet) {
-    if (!ethers.Wallet.isSigner(wallet)) {
-      throw new Error('Provided wallet is not a signer');
-    }
-
+  constructor(wallet: ExternalWallet) {
     this._wallet = wallet;
   }
 
@@ -30,7 +31,10 @@ class Interact {
 
   private getNetworkCredential(chainId: ChainId, rpcUrl?: string) {
     const provider = this.getProvider(chainId, rpcUrl);
-    const signer = this._wallet.connect(provider);
+    const signer = {
+      ...this._wallet,
+      provider,
+    } satisfies InteractWallet;
     return {
       provider,
       signer,
@@ -59,7 +63,7 @@ class Interact {
   ): Promise<string | null> {
     try {
       const normalizedPayload = this.normalizePayload(payload);
-      console.log('infer - start', {
+      console.log('inferWithExternalWallet - start', {
         payload: normalizedPayload,
       });
       if (
@@ -68,27 +72,27 @@ class Interact {
         const result = await this.inferWithPrompt(
           normalizedPayload as InferPayloadWithPrompt
         );
-        console.log('infer - succeed', result);
+        console.log('inferWithExternalWallet - succeed', result);
         return result;
       } else {
         const result = await this.inferWithMessages(
           normalizedPayload as InferPayloadWithMessages
         );
-        console.log('infer - succeed', result);
+        console.log('inferWithExternalWallet - succeed', result);
         return result;
       }
     } catch (e) {
-      console.log('infer - failed', e);
+      console.log('inferWithExternalWallet - failed', e);
       throw e;
     } finally {
-      console.log('infer - end');
+      console.log('inferWithExternalWallet - end');
     }
   }
 
   private async inferWithPrompt(
     payload: InferPayloadWithPrompt
   ): Promise<string | null> {
-    console.log('inferWithPrompt - start');
+    console.log('inferWithEternalWalletWithPrompt - start');
     const { signer } = this.getNetworkCredential(
       payload.chainId,
       payload.rpcUrl
@@ -96,7 +100,7 @@ class Interact {
 
     const params = await methods.Infer.createPayloadWithPrompt(signer, payload);
 
-    const signedTx = await signer.signTransaction(params);
+    const signedTx = await signer.requestSignature(params);
 
     const sendPromptTxHash = await methods.Infer.sendPrompt(signer, signedTx);
 
@@ -116,7 +120,8 @@ class Interact {
   private async inferWithMessages(
     payload: InferPayloadWithMessages
   ): Promise<string | null> {
-    console.log('inferWithMessages - start');
+    console.log('inferWithEternalWalletWithMessages - start');
+
     const { signer } = this.getNetworkCredential(
       payload.chainId,
       payload.rpcUrl
@@ -127,7 +132,7 @@ class Interact {
       payload
     );
 
-    const signedTx = await signer.signTransaction(params);
+    const signedTx = await signer.requestSignature(params);
 
     const sendPromptTxHash = await methods.Infer.sendPrompt(signer, signedTx);
 
@@ -145,4 +150,4 @@ class Interact {
   }
 }
 
-export default Interact;
+export default InteractWithExternalWallet;

@@ -83,7 +83,7 @@ const Infer = {
       console.log('infer getSystemPrompt - succeed', systemPrompt);
       return systemPrompt;
     } catch (e) {
-      console.log('infer getSystemPrompt - failed', e);
+      console.log('infer getSystemPrompt - failed');
       throw e;
     } finally {
       console.log('infer getSystemPrompt - end');
@@ -119,7 +119,7 @@ const Infer = {
         promptPayload,
       ]);
 
-      const from = await wallet.getAddress();
+      const from = wallet.address || (await wallet.getAddress());
       const [gasLimit, gasPrice, nonce] = await Promise.all([
         contract.estimateGas.prompt(promptPayload),
         wallet.provider.getGasPrice(),
@@ -138,7 +138,7 @@ const Infer = {
       console.log('infer createPayloadWithPrompt - succeed', params);
       return params;
     } catch (e) {
-      console.log('infer createPayloadWithPrompt - failed', e);
+      console.log('infer createPayloadWithPrompt - failed');
       throw e;
     } finally {
       console.log('infer createPayloadWithPrompt - end');
@@ -163,7 +163,7 @@ const Infer = {
         promptPayload,
       ]);
 
-      const from = await wallet.getAddress();
+      const from = wallet.address || (await wallet.getAddress());
       const [gasLimit, gasPrice, nonce] = await Promise.all([
         contract.estimateGas.prompt(promptPayload),
         wallet.provider.getGasPrice(),
@@ -182,7 +182,7 @@ const Infer = {
       console.log('infer createPayloadWithMessages - succeed', params);
       return params;
     } catch (e) {
-      console.log('infer createPayloadWithMessages - failed', e);
+      console.log('infer createPayloadWithMessages - failed');
       throw e;
     } finally {
       console.log('infer createPayloadWithMessages - end');
@@ -203,7 +203,7 @@ const Infer = {
 
       return receipt.transactionHash;
     } catch (e) {
-      console.log('infer execute - failed', e);
+      console.log('infer execute - failed');
       throw e;
     } finally {
       console.log('infer execute - end');
@@ -220,7 +220,7 @@ const Infer = {
       console.log('infer getWorkerHubAddress - succeed', schedule);
       return schedule;
     } catch (e) {
-      console.log('infer getWorkerHubAddress - failed', e);
+      console.log('infer getWorkerHubAddress - failed');
       throw e;
     } finally {
       console.log('infer getWorkerHubAddress - end');
@@ -379,7 +379,7 @@ const Infer = {
       console.log('infer listenPromptResponse - succeed', result);
       return result;
     } catch (e) {
-      console.log('infer listenPromptResponse - failed', e);
+      console.log('infer listenPromptResponse - failed');
       throw e;
     } finally {
       console.log('infer listenPromptResponse - end');
