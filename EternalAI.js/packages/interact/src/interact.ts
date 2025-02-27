@@ -1,31 +1,19 @@
 import * as ethers from 'ethers';
 import { InferPayloadWithMessages, InferPayloadWithPrompt } from './types';
 import * as methods from './methods';
-import { CHAIN_MAPPING, ChainId } from './constants';
+import { ChainId } from './constants';
+import BaseInteract, { IInteract } from './baseInteract';
 
-class Interact {
+class Interact extends BaseInteract implements IInteract {
   private _wallet: ethers.Wallet;
 
   constructor(wallet: ethers.Wallet) {
+    super();
     if (!ethers.Wallet.isSigner(wallet)) {
       throw new Error('Provided wallet is not a signer');
     }
 
     this._wallet = wallet;
-  }
-
-  private getProvider(chainId: ChainId, rpcUrl?: string) {
-    // create provider from user optional
-    if (!!rpcUrl) {
-      return new ethers.providers.JsonRpcProvider(rpcUrl);
-    }
-
-    if (!CHAIN_MAPPING[chainId]) {
-      throw new Error(`Unsupported chainId: ${chainId}`);
-    }
-
-    // create provider from default supported chainId
-    return new ethers.providers.JsonRpcProvider(CHAIN_MAPPING[chainId]);
   }
 
   private getNetworkCredential(chainId: ChainId, rpcUrl?: string) {
@@ -34,15 +22,6 @@ class Interact {
     return {
       provider,
       signer,
-    };
-  }
-
-  private normalizePayload(
-    payload: InferPayloadWithPrompt | InferPayloadWithMessages
-  ) {
-    return {
-      ...payload,
-      isLightHouse: payload.isLightHouse ?? false,
     };
   }
 
