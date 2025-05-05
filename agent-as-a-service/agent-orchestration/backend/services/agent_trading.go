@@ -813,50 +813,60 @@ func (s *Service) GetTradeAnalytic(ctx context.Context, token string) (interface
 	cacheKey := fmt.Sprintf(`GetTradeAnalytic_%s`, token)
 	err := s.GetRedisCachedWithKey(cacheKey, &resp)
 	if err != nil {
-		binanceInfo, err := helpers.GetBinancePrice24h(fmt.Sprintf(`%sUSDT`, token))
-		if err != nil {
-			return nil, errs.NewError(err)
-		}
 		mapToken, _ := s.GetMapAgentSnapshotMissionTokens(ctx)
-		resp.TokenSymbol = token
-		if v, ok := mapToken[token]; ok {
-			resp.TokenName = v.Name
+		for range 3 {
+			binanceInfo, err := helpers.GetBinancePrice24h(fmt.Sprintf(`%sUSDT`, token))
+			if err == nil {
+				resp.TokenSymbol = token
+				if v, ok := mapToken[token]; ok {
+					resp.TokenName = v.Name
+				}
+				resp.LastPrice = binanceInfo.LastPrice
+				resp.PriceChange = binanceInfo.PriceChange
+				resp.PriceChangePercent = binanceInfo.PriceChangePercent
+				resp.WeightedAvgPrice = binanceInfo.WeightedAvgPrice
+				resp.PrevClosePrice = binanceInfo.PrevClosePrice
+				resp.LastQty = binanceInfo.LastQty
+				resp.BidPrice = binanceInfo.BidPrice
+				resp.BidQty = binanceInfo.BidQty
+				resp.AskQty = binanceInfo.AskQty
+				resp.OpenPrice = binanceInfo.OpenPrice
+				resp.HighPrice = binanceInfo.HighPrice
+				resp.LowPrice = binanceInfo.LowPrice
+				resp.Volume = binanceInfo.Volume
+				resp.QuoteVolume = binanceInfo.QuoteVolume
+				resp.OpenTime = binanceInfo.OpenTime
+				resp.CloseTime = binanceInfo.CloseTime
+
+				break
+			} else {
+				time.Sleep(1 * time.Second)
+			}
 		}
-		resp.LastPrice = binanceInfo.LastPrice
-		resp.PriceChange = binanceInfo.PriceChange
-		resp.PriceChangePercent = binanceInfo.PriceChangePercent
-		resp.WeightedAvgPrice = binanceInfo.WeightedAvgPrice
-		resp.PrevClosePrice = binanceInfo.PrevClosePrice
-		resp.LastQty = binanceInfo.LastQty
-		resp.BidPrice = binanceInfo.BidPrice
-		resp.BidQty = binanceInfo.BidQty
-		resp.AskQty = binanceInfo.AskQty
-		resp.OpenPrice = binanceInfo.OpenPrice
-		resp.HighPrice = binanceInfo.HighPrice
-		resp.LowPrice = binanceInfo.LowPrice
-		resp.Volume = binanceInfo.Volume
-		resp.QuoteVolume = binanceInfo.QuoteVolume
-		resp.OpenTime = binanceInfo.OpenTime
-		resp.CloseTime = binanceInfo.CloseTime
 
-		analyticInfo, _ := s.taapi.BulkRequest(token)
-		if analyticInfo != nil {
-			for _, item := range analyticInfo.Data {
-				if item.ID == "fibonacciretracement" {
-					resp.Fibonacci = item.Result.Value
-				}
+		for range 3 {
+			analyticInfo, err := s.taapi.BulkRequest(token)
+			if analyticInfo != nil && err == nil {
+				for _, item := range analyticInfo.Data {
+					if item.ID == "fibonacciretracement" {
+						resp.Fibonacci = item.Result.Value
+					}
 
-				if item.ID == "rsi" {
-					resp.Rsi = item.Result.Value
-				}
+					if item.ID == "rsi" {
+						resp.Rsi = item.Result.Value
+					}
 
-				if item.ID == "sma" {
-					resp.Sma20 = item.Result.Value
-				}
+					if item.ID == "sma" {
+						resp.Sma20 = item.Result.Value
+					}
 
-				if item.ID == "ema" {
-					resp.Ema12 = item.Result.Value
+					if item.ID == "ema" {
+						resp.Ema12 = item.Result.Value
+					}
 				}
+				break
+			} else {
+				time.Sleep(1 * time.Second)
 			}
 		}
 		_ = s.SetRedisCachedWithKey(cacheKey, resp, 5*time.Minute)

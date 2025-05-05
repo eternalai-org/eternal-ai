@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"bytes"
-	"crypto/elliptic"
 	"crypto/md5"
 	"encoding/csv"
 	"encoding/hex"
@@ -24,10 +23,9 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/stealth"
 	"github.com/gocolly/colly"
 	"github.com/leekchan/accounting"
 	"mvdan.cc/xurls/v2"
@@ -433,24 +431,6 @@ func SliceToStrings(from, len int, getValueAtIndex func(index int) (string, erro
 	return res, nil
 }
 
-func WalletAddressFromCompressedPublicKey(publicKeyStr string) (string, error) {
-	pubBytes, err := hex.DecodeString(publicKeyStr)
-	if err != nil {
-		return "", err
-	}
-
-	x, y := secp256k1.DecompressPubkey(pubBytes)
-
-	pubkey := elliptic.Marshal(secp256k1.S256(), x, y)
-
-	ecdsaPub, err := crypto.UnmarshalPubkey(pubkey)
-	if err != nil {
-		return "", err
-	}
-	ethAddress := crypto.PubkeyToAddress(*ecdsaPub).String()
-	return ethAddress, nil
-}
-
 func IsValidEthereumAddress(address string) bool {
 	// Regular expression to match Ethereum addresses
 	re := regexp.MustCompile(`^0x[0-9a-fA-F]{40}$`)
@@ -641,7 +621,10 @@ func RodContentHtmlByUrl(rawUrl string) string {
 	}
 	spew.Dump(path)
 
-	u := launcher.New().Bin(path).Headless(true).MustLaunch()
+	u := launcher.New().Bin(path).
+		Headless(true).
+		// Proxy("http://65.49.14.150:3128").
+		MustLaunch()
 	browser := rod.New().ControlURL(u)
 
 	page := browser.MustConnect().MustPage(rawUrl)
@@ -657,6 +640,57 @@ func RodContentHtmlByUrl(rawUrl string) string {
 	page.MustWaitStable()
 	page.MustEval(`() => document.querySelectorAll("[crossorigin]").forEach((el) => el.removeAttribute('crossorigin'))
 	`)
+
+	htmlStr, err := page.HTML()
+	if err != nil {
+		return ""
+	}
+	htmlStr, err = MinifyHTML(htmlStr)
+	return htmlStr
+}
+
+func printReport(page *rod.Page) {
+	_ = page.MustElement(".ds-dex-table-row")
+	// for _, row := range el.MustParents("table").First().MustElements("tr:nth-child(n+2)") {
+	// 	cells := row.MustElements("td")
+	// 	key := cells[0].MustProperty("textContent")
+	// 	if strings.HasPrefix(key.String(), "User Agent") {
+	// 		fmt.Printf("\t\t%s: %t\n\n", key, !strings.Contains(cells[1].MustProperty("textContent").String(), "HeadlessChrome/"))
+	// 	} else {
+	// 		fmt.Printf("\t\t%s: %s\n\n", key, cells[1].MustProperty("textContent"))
+	// 	}
+	// }
+
+	page.MustScreenshot("")
+}
+
+func RodContentHtmlByUrlV2(rawUrl string) string {
+	path, has := launcher.LookPath()
+	if !has {
+		return ""
+	}
+	spew.Dump(path)
+
+	u := launcher.New().Bin(path).Headless(true).MustLaunch()
+	browser := rod.New().ControlURL(u).MustConnect()
+
+	fmt.Printf("js: %x\n\n", md5.Sum([]byte(stealth.JS)))
+	page := stealth.MustPage(browser)
+	page.MustNavigate(rawUrl)
+	// page.MustWaitLoad()
+	// time.Sleep(15 * time.Second)
+
+	printReport(page)
+	// i := 0
+	// for i <= 5 {
+	// 	page.MustEval(`() => window.scrollTo(0, document.body.scrollHeight)`)
+	// 	time.Sleep(1 * time.Second)
+	// 	i += 1
+	// }
+
+	// page.MustWaitStable()
+	// page.MustEval(`() => document.querySelectorAll("[crossorigin]").forEach((el) => el.removeAttribute('crossorigin'))
+	// `)
 
 	htmlStr, err := page.HTML()
 	if err != nil {
@@ -798,4 +832,28 @@ func splitStringArray(arr []string, size int) [][]string {
 		result = append(result, arr[i:end])
 	}
 	return result
+}
+
+func GenerateTokenSymbol(tokenName string) string {
+	// Remove special characters and spaces
+	tokenSymbol := strings.ToLower(tokenName)
+	tokenSymbol = strings.ReplaceAll(tokenSymbol, " ", "")
+	tokenSymbol = strings.ReplaceAll(tokenSymbol, "-", "")
+	tokenSymbol = strings.ReplaceAll(tokenSymbol, "_", "")
+
+	// Remove any non-alphanumeric characters
+	reg := regexp.MustCompile("[^a-z0-9]")
+	tokenSymbol = reg.ReplaceAllString(tokenSymbol, "")
+
+	// Take first 5 characters
+	if len(tokenSymbol) > 5 {
+		tokenSymbol = tokenSymbol[:5]
+	}
+
+	// If empty after cleaning, return default
+	if tokenSymbol == "" {
+		tokenSymbol = RandomStringWithLength(5)
+	}
+	fmt.Println(tokenSymbol)
+	return strings.ToUpper(tokenSymbol)
 }

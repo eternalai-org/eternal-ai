@@ -1,0 +1,31 @@
+{
+  "name": "agent-cli",
+  "version": "1.0.0",
+  "main": "src/main.ts",
+  "module": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "yarn build && ts-node src/main.ts",
+    "build": "tsup --format esm --dts"
+  },
+  "bin": {
+    "eai": "./dist/main.js"
+  },
+  "dependencies": {
+    "@types/node": "^22.13.1",
+    "axios": "^1.7.9",
+    "chalk": "^5.4.1",
+    "cli-table3": "^0.6.5",
+    "commander": "^13.1.0",
+    "ethers": "^6.13.5",
+    "readline": "^1.3.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.7"
+  }
+}

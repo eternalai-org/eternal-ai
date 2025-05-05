@@ -82,12 +82,19 @@ logging_config = {
 }
 
 if __name__ == "__main__":
+    logger.info(f"Starting API server version: {__version__}")
+
+    logger.info(f"Connecting to Milvus at {const.MILVUS_HOST}")
     connections.connect(uri=const.MILVUS_HOST)
+    logger.info(f"Connected to Milvus at {const.MILVUS_HOST}")
 
     from app.api import router as app_router
-    from app.handlers import prepare_milvus_collection, deduplicate_task
+    from app.handlers import prepare_milvus_collection, deduplicate_task, resume_pending_tasks
+    
     prepare_milvus_collection()
+
     schedule.every(300).minutes.do(deduplicate_task)
+    schedule.every(5).minutes.do(resume_pending_tasks)
 
     api_app = FastAPI()
     api_app.include_router(app_router)

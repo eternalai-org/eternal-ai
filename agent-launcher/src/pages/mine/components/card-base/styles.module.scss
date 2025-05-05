@@ -1,0 +1,27 @@
+.card {
+  --border-width: 1px;
+  --border-radius: 12px;
+  --inner-border-radius: calc(var(--border-radius) - var(--border-width));
+  --real-padding: 24px;
+  --padding: calc(var(--real-padding) - var(--border-width));
+  --border-color: #EFEFEF;
+  --background-color: #fff;
+
+  position: relative;
+  padding: var(--border-width);
+  border-radius: var(--border-radius);
+  background: var(--border-color);
+
+  &_inner {
+    background: var(--background-color);
+    border-radius: var(--inner-border-radius);
+    width: 100%;
+    height: 100%;
+
+    &_content {
+      width: 100%;
+      height: 100%;
+      padding: var(--padding);
+    }
+  }
+}

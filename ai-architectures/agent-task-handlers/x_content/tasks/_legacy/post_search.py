@@ -172,7 +172,10 @@ class PostSearchTask(MultiStepTaskBase):
         user_prompt = await self.get_user_prompt(log)
 
         tweet, debug_data = await brainstorm_post_service.generate_content(
-            system_prompt, user_prompt, self.kn_base
+            system_prompt,
+            user_prompt,
+            self.kn_base,
+            task_name=log.task,
         )
 
         return tweet, debug_data

@@ -1,3 +1,4 @@
+from x_content.wrappers.analytic.custom import send_log_to_custom_analytic
 from x_content.wrappers.magic import helpful_raise_for_status
 from .log_decorators import log_function_call
 from typing import List
@@ -10,7 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 @log_function_call
-def search_from_bing(query: str, top_k: int = 1) -> List[str]:
+def search_from_bing(
+    query: str, top_k: int = 1, task_name: str = "N/A"
+) -> List[str]:
     """
     Retrieves and integrates up-to-date information on topics where recent events or developments (2024 onward)
     are essential to accurately address the user's query.
@@ -26,6 +29,16 @@ def search_from_bing(query: str, top_k: int = 1) -> List[str]:
     Returns:
         str: A consolidated summary of insights derived from the search results.
     """
+
+    send_log_to_custom_analytic(
+        "search_from_bing",
+        params=[
+            {"key": "query", "value": query},
+            {"key": "top_k", "value": top_k},
+            {"key": "task_name", "value": task_name},
+        ],
+        append_uuid=True,
+    )
 
     url = "https://api.bing.microsoft.com/v7.0/news/search"
 

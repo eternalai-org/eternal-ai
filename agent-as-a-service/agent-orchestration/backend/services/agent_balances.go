@@ -40,6 +40,22 @@ func (s *Service) FindAgentSnapshotPostAction(ctx context.Context, agentId uint)
 	return s.dao.FindAgentSnapshotPostAction(daos.GetDBMainCtx(ctx), filters, preloads, []string{"id DESC"}, 0, 50)
 }
 
+func (s *Service) GetListAgentCategory(ctx context.Context, page, limit int) ([]*models.AgentCategory, error) {
+	filters := map[string][]any{}
+	ms, err := s.dao.FindAgentCategory(
+		daos.GetDBMainCtx(ctx),
+		filters,
+		nil,
+		[]string{"priority DESC", "id ASC"},
+		page,
+		limit,
+	)
+	if err != nil {
+		return nil, errs.NewError(err)
+	}
+	return ms, nil
+}
+
 func (s *Service) GetListAgentInfos(ctx context.Context, networkID uint64, creator string, agentTypes []uint, kbStatus int64, keyword string, page, limit int) ([]*models.AgentInfo, uint, error) {
 	selected := []string{
 		"agent_infos.*",
@@ -84,6 +100,7 @@ func (s *Service) GetListAgentInfos(ctx context.Context, networkID uint64, creat
 			"TokenInfo":                        {},
 			"KnowledgeBase":                    {},
 			"KnowledgeBase.KnowledgeBaseFiles": {},
+			"AgentCategory":                    {},
 		},
 		[]string{"created_at desc"}, page, limit,
 	)
@@ -346,35 +363,89 @@ func (s *Service) JobCreateTokenInfo(ctx context.Context) error {
 		ctx, "JobCreateTokenInfo",
 		func() error {
 			var retErr error
-			agents, err := s.dao.FindAgentInfoJoin(
-				daos.GetDBMainCtx(ctx),
-				map[string][]any{
-					"join agent_chain_fees on agent_chain_fees.network_id = agent_infos.token_network_id": {},
-				},
-				map[string][]any{
-					`agent_infos.token_status in (?) or (agent_infos.agent_type=2 and agent_infos.status="ready")`: {[]string{"pending", "etching"}},
-					"agent_infos.agent_nft_minted = ?":                                      {true},
-					`(agent_infos.token_address is null or agent_infos.token_address = "")`: {},
-					`agent_infos.token_network_id > 0`:                                      {},
-					`(
-						(agent_infos.eai_balance > 0 and agent_infos.eai_balance >= agent_chain_fees.token_fee) 
-						or agent_infos.ref_tweet_id > 0
-					)`: {},
-				},
-				map[string][]any{},
-				[]string{
-					"rand()",
-				},
-				0,
-				50,
-			)
-			if err != nil {
-				return errs.NewError(err)
-			}
-			for _, agent := range agents {
-				err = s.CreateTokenInfo(ctx, agent.ID)
+			// create token info for normal agent
+			{
+				agents, err := s.dao.FindAgentInfoJoin(
+					daos.GetDBMainCtx(ctx),
+					map[string][]any{
+						"join agent_chain_fees on agent_chain_fees.network_id = agent_infos.token_network_id": {},
+					},
+					map[string][]any{
+						`agent_infos.token_status in (?) or (agent_infos.agent_type=2 and agent_infos.status="ready")`: {[]string{"pending", "etching"}},
+						"agent_infos.agent_nft_minted = ?":                                      {true},
+						`(agent_infos.token_address is null or agent_infos.token_address = "")`: {},
+						`agent_infos.token_network_id > 0`:                                      {},
+						`(
+							(agent_infos.eai_balance > 0 and agent_infos.eai_balance >= agent_chain_fees.token_fee)
+							or agent_infos.ref_tweet_id > 0
+							or agent_infos.agent_type in (?)
+						)`: {
+							[]models.AgentInfoAgentType{
+								models.AgentInfoAgentTypeModel,
+								models.AgentInfoAgentTypeModelOnline,
+								models.AgentInfoAgentTypeJs,
+								models.AgentInfoAgentTypePython,
+								models.AgentInfoAgentTypeInfa,
+								models.AgentInfoAgentTypeCustomUi,
+								models.AgentInfoAgentTypeCustomPrompt,
+							},
+						},
+						"agent_infos.system_prompt != ''": {},
+					},
+					map[string][]any{},
+					[]string{
+						"rand()",
+					},
+					0,
+					50,
+				)
 				if err != nil {
-					retErr = errs.MergeError(retErr, errs.NewError(err))
+					return errs.NewError(err)
+				}
+				for _, agent := range agents {
+					err = s.CreateTokenInfo(ctx, agent.ID)
+					if err != nil {
+						retErr = errs.MergeError(retErr, errs.NewError(err))
+					}
+				}
+			}
+			// create token info for vibe agent
+			{
+				agents, err := s.dao.FindAgentInfo(
+					daos.GetDBMainCtx(ctx),
+					map[string][]any{
+						`status = ?`:           {models.AssistantStatusReady},
+						`agent_nft_minted = ?`: {true},
+						`token_address = ''`:   {},
+						`token_name = '' or token_image_url = '' or token_image_url = ''`: {},
+						`agent_type in (?)`: {
+							[]models.AgentInfoAgentType{
+								models.AgentInfoAgentTypeModel,
+								models.AgentInfoAgentTypeModelOnline,
+								models.AgentInfoAgentTypeJs,
+								models.AgentInfoAgentTypePython,
+								models.AgentInfoAgentTypeInfa,
+								models.AgentInfoAgentTypeCustomUi,
+								models.AgentInfoAgentTypeCustomPrompt,
+							},
+						},
+						`system_prompt != ''`: {},
+					},
+					map[string][]any{},
+					[]string{
+						"rand()",
+					},
+					0,
+					50,
+				)
+				if err != nil {
+					return errs.NewError(err)
+				}
+				for _, agent := range agents {
+					err = s.CreateTokenInfoVibe(ctx, agent.ID)
+					if err != nil {
+						retErr = errs.MergeError(retErr, errs.NewError(err))
+					}
 				}
 			}
 			return retErr
@@ -526,12 +597,12 @@ func (s *Service) CreateTokenInfo(ctx context.Context, agentID uint) error {
 											"token_position_hash": "ok",
 										},
 									).Error
-									if agentInfo.RefTweetID > 0 {
-										go s.ReplyAferAutoCreateAgent(daos.GetDBMainCtx(ctx), agentInfo.RefTweetID, agentInfo.ID)
-									} else {
-										// TODO: post twitter
-										go s.PostTwitterAferCreateToken(ctx, agentInfo.ID)
-									}
+									// if agentInfo.RefTweetID > 0 {
+									// 	go s.ReplyAferAutoCreateAgent(daos.GetDBMainCtx(ctx), agentInfo.RefTweetID, agentInfo.ID)
+									// } else {
+									// 	// TODO: post twitter
+									// 	go s.PostTwitterAferCreateToken(ctx, agentInfo.ID)
+									// }
 									if tokenFee.Cmp(big.NewFloat(0)) > 0 {
 										_ = func() error {
 											_ = daos.GetDBMainCtx(ctx).
@@ -589,6 +660,96 @@ func (s *Service) CreateTokenInfo(ctx context.Context, agentID uint) error {
 								).Error
 							}
 						}
+					}
+				}
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return errs.NewError(err)
+	}
+	return nil
+}
+
+func (s *Service) CreateTokenInfoVibe(ctx context.Context, agentID uint) error {
+	err := s.JobRunCheck(
+		ctx, fmt.Sprintf("CreateTokenInfoVibe_%d", agentID),
+		func() error {
+			agentInfo, err := s.dao.FirstAgentInfoByID(daos.GetDBMainCtx(ctx),
+				agentID,
+				map[string][]any{},
+				false,
+			)
+			if err != nil {
+				return errs.NewError(err)
+			}
+			if agentInfo == nil {
+				return errs.NewError(errs.ErrBadRequest)
+			}
+			if !agentInfo.IsVibeAgent() {
+				return errs.NewError(errs.ErrBadRequest)
+			}
+			if agentInfo.SystemPrompt != "" {
+				if agentInfo.TokenSymbol == "" || agentInfo.TokenName == "" {
+					promptGenerateToken := fmt.Sprintf(`
+									I want to generate my token base on this info
+									'%s'
+			
+									token-name (generate if not provided, make sure it not empty)
+									token-symbol (generate if not provided, make sure it not empty)
+									token-story (generate if not provided, make sure it not empty)
+			
+									Please return in string in json format including token-name, token-symbol, token-story, just only json without explanation  and token name limit with 15 characters
+								`, agentInfo.SystemPrompt)
+					aiStr, err := s.openais["Lama"].ChatMessage(promptGenerateToken)
+					if err != nil {
+						return errs.NewError(err)
+					}
+					if aiStr != "" {
+						mapInfo := helpers.ExtractMapInfoFromOpenAI(aiStr)
+						tokenName := ""
+						tokenSymbol := ""
+						tokenDesc := ""
+						if mapInfo != nil {
+							if v, ok := mapInfo["token-name"]; ok {
+								tokenName = fmt.Sprintf(`%v`, v)
+							}
+							if v, ok := mapInfo["token-symbol"]; ok {
+								tokenSymbol = fmt.Sprintf(`%v`, v)
+							}
+							if v, ok := mapInfo["token-story"]; ok {
+								tokenDesc = fmt.Sprintf(`%v`, v)
+							}
+						}
+						if tokenDesc != "" && tokenName != "" && tokenSymbol != "" {
+							updateFields := map[string]any{
+								"token_name": tokenName,
+								"token_desc": tokenDesc,
+							}
+							if agentInfo.TokenSymbol == "" {
+								updateFields["token_symbol"] = tokenSymbol
+							}
+							err := daos.GetDBMainCtx(ctx).Model(agentInfo).Updates(
+								updateFields,
+							).Error
+							if err != nil {
+								return errs.NewError(err)
+							}
+						}
+					}
+				} else if agentInfo.TokenImageUrl == "" {
+					imageUrl, err := s.GetGifImageUrlFromTokenInfo(agentInfo.TokenSymbol, agentInfo.TokenName, agentInfo.TokenDesc)
+					if err != nil {
+						return errs.NewError(err)
+					}
+					err = daos.GetDBMainCtx(ctx).Model(agentInfo).Updates(
+						map[string]any{
+							"token_image_url": imageUrl,
+						},
+					).Error
+					if err != nil {
+						return errs.NewError(err)
 					}
 				}
 			}
@@ -700,12 +861,8 @@ func (s *Service) PostTwitterAferCreateToken(ctx context.Context, agentInfoID ui
 	return nil
 }
 
-func (s *Service) GetDashboardAgentInfos(ctx context.Context, networkID uint64, agentType int, tokenAddress, search, agentModel string, sortListStr []string, page, limit int) ([]*models.AgentInfo, uint, error) {
-	sortDefault := "ifnull(agent_infos.priority, 0) desc, meme_market_cap desc"
-	if len(sortListStr) > 0 {
-		sortDefault = strings.Join(sortListStr, ", ")
-	}
-
+func (s *Service) GetDashboardAgentInfos(ctx context.Context, contractAddresses []string, userAddress string, networkID uint64, agentType int, agentTypes []int,
+	tokenAddress, search, agentModel string, installed *bool, ids, exludeIds []uint, categoryIds []string, includeHidden *bool, sortListStr []string, page, limit int) ([]*models.AgentInfo, uint, error) {
 	selected := []string{
 		`ifnull(agent_infos.reply_latest_time, agent_infos.updated_at) reply_latest_time`,
 		"agent_infos.*",
@@ -730,7 +887,9 @@ func (s *Service) GetDashboardAgentInfos(ctx context.Context, networkID uint64, 
 			and agent_infos.id != 15
 		`: {},
 		`agent_infos.token_address != "" and ifnull(memes.status, "") not in ("created", "pending")`: {},
+		`agent_infos.agent_type != ?`: {models.AgentInfoAgentTypeVideo},
 	}
+
 	if search != "" {
 		search = fmt.Sprintf("%%%s%%", strings.ToLower(search))
 		filters[`
@@ -741,13 +900,35 @@ func (s *Service) GetDashboardAgentInfos(ctx context.Context, networkID uint64, 
 			or LOWER(agent_infos.agent_name) like ?
 			or ifnull(twitter_users.twitter_username, "") like ?
 			or ifnull(twitter_users.name, "") like ?
-		`] = []any{search, search, search, search, search, search, search}
+			or LOWER(agent_infos.display_name) like ? 
+		`] = []any{search, search, search, search, search, search, search, search}
 	}
 
-	if agentType > 0 {
-		filters["agent_infos.agent_type = ?"] = []any{agentType}
+	//filter agent type
+	if agentType != -1 {
+		if agentType > 0 {
+			filters["agent_infos.agent_type = ?"] = []any{agentType}
+		} else if len(agentTypes) > 0 {
+			filters["agent_infos.agent_type in (?)"] = []any{agentTypes}
+		} else {
+			filters["agent_infos.agent_type not in (?)"] = []any{[]models.AgentInfoAgentType{
+				models.AgentInfoAgentTypeModel,
+				models.AgentInfoAgentTypeModelOnline,
+				models.AgentInfoAgentTypeJs,
+				models.AgentInfoAgentTypePython,
+				models.AgentInfoAgentTypeInfa,
+				models.AgentInfoAgentTypeCustomUi,
+				models.AgentInfoAgentTypeCustomPrompt,
+			}}
+		}
 	}
 
+	//filter contract address
+	if len(contractAddresses) > 0 {
+		filters["agent_infos.agent_contract_address in (?)"] = []any{contractAddresses}
+	}
+
+	//filter agent model
 	if agentModel != "" {
 		filters["agent_infos.agent_base_model = ?"] = []any{agentModel}
 	}
@@ -778,6 +959,62 @@ func (s *Service) GetDashboardAgentInfos(ctx context.Context, networkID uint64, 
 		}
 	}
 
+	if len(ids) > 0 {
+		filters["agent_infos.id in (?)"] = []any{ids}
+	} else {
+		if includeHidden == nil || !(*includeHidden) {
+			filters["agent_infos.is_public = 1"] = []any{}
+		}
+		//filter instlled app
+		// if installed != nil && userAddress != "" {
+		// 	if *installed {
+		// 		joinFilters = map[string][]any{
+		// 			`
+		// 			left join memes on agent_infos.id = memes.agent_info_id and memes.deleted_at IS NULL
+		// 			left join agent_token_infos on agent_token_infos.id = agent_infos.token_info_id
+		// 			left join twitter_users on twitter_users.twitter_id = agent_infos.tmp_twitter_id and  agent_infos.tmp_twitter_id is not null
+		// 			join agent_utility_installs on agent_utility_installs.agent_info_id = agent_infos.id
+		// 					and agent_utility_installs.deleted_at IS NULL and agent_utility_installs.address = ?
+		// 		`: {strings.ToLower(userAddress)},
+		// 		}
+		// 	} else {
+		// 		filters["agent_infos.id not in (select agent_info_id from agent_utility_installs where address = ?)"] = []any{strings.ToLower(userAddress)}
+		// 		filters["agent_infos.is_public = 1"] = []any{}
+		// 	}
+		// } else {
+		// 	filters["agent_infos.is_public = 1"] = []any{}
+		// }
+	}
+
+	if len(exludeIds) > 0 {
+		filters["agent_infos.id not in (?)"] = []any{exludeIds}
+	}
+
+	if len(categoryIds) > 0 {
+		filters["agent_infos.agent_category_id in (?)"] = []any{categoryIds}
+	}
+
+	if userAddress != "" {
+		joinFilters = map[string][]any{
+			`
+			left join memes on agent_infos.id = memes.agent_info_id and memes.deleted_at IS NULL
+			left join agent_token_infos on agent_token_infos.id = agent_infos.token_info_id
+			left join twitter_users on twitter_users.twitter_id = agent_infos.tmp_twitter_id and  agent_infos.tmp_twitter_id is not null
+			left join agent_utility_recent_chats on agent_utility_recent_chats.agent_info_id = agent_infos.id
+					and agent_utility_recent_chats.address = ?
+		`: {strings.ToLower(userAddress)},
+		}
+		sortRecentChat := "ifnull(agent_utility_recent_chats.updated_at, now() - interval 100 day) desc"
+		newSortListStr := make([]string, 0, len(sortListStr)+1)
+		newSortListStr = append(newSortListStr, sortRecentChat)
+		newSortListStr = append(newSortListStr, sortListStr...)
+		sortListStr = newSortListStr
+	}
+
+	sortDefault := "ifnull(agent_infos.priority, 0) desc, meme_market_cap desc"
+	if len(sortListStr) > 0 {
+		sortDefault = strings.Join(sortListStr, ", ")
+	}
 	agents, err := s.dao.FindAgentInfoJoinSelect(
 		daos.GetDBMainCtx(ctx),
 		selected,
@@ -788,6 +1025,7 @@ func (s *Service) GetDashboardAgentInfos(ctx context.Context, networkID uint64, 
 			"TmpTwitterInfo": {},
 			"Meme":           {`deleted_at IS NULL and status not in ("created", "pending")`},
 			"TokenInfo":      {},
+			"AgentCategory":  {},
 		},
 		[]string{sortDefault},
 		page, limit,

@@ -26,6 +26,7 @@ type MemeReq struct {
 	FbPair          bool             `json:"fb_pair"`
 	AgentInfoID     uint             `json:"agent_info_id"`
 	BaseTokenSymbol string           `json:"base_token_symbol"`
+	NotGraduated    bool             `json:"not_graduated"`
 }
 
 type MemeResp struct {
@@ -465,4 +466,111 @@ type TransferCatReq struct {
 	SendAmount      string `json:"send_amount"`
 	SenderAddress   string `json:"sender_address"`
 	WifPrivateKey   string `json:"wif_private_key"`
+}
+
+type UserVideoResp struct {
+	ID                 uint                  `json:"id"`
+	CreatedAt          time.Time             `json:"created_at"`
+	TokenName          string                `json:"token_name"`
+	TokenSymbol        string                `json:"token_symbol"`
+	TokenAddress       string                `json:"token_address"`
+	TokenImageUrl      string                `json:"token_image_url"`
+	TokenDesc          string                `json:"token_desc"`
+	RequestorAddress   string                `json:"requestor_address"`
+	OwnerTwitterID     string                `json:"owner_twitter_id"`
+	AgentTwitterPostID uint                  `json:"agent_twitter_post_id"`
+	AgentTwitterPost   *AgentTwitterPostResp `json:"agent_twitter_post"`
+}
+
+func NewUserVideoResp(m *models.ClankerVideoToken) *UserVideoResp {
+	if m == nil {
+		return nil
+	}
+	return &UserVideoResp{
+		ID:                 m.ID,
+		CreatedAt:          m.CreatedAt,
+		TokenName:          m.TokenName,
+		TokenSymbol:        m.TokenSymbol,
+		TokenAddress:       m.TokenAddress,
+		TokenImageUrl:      m.TokenImageUrl,
+		TokenDesc:          m.TokenDesc,
+		RequestorAddress:   m.RequestorAddress,
+		OwnerTwitterID:     m.OwnerTwitterID,
+		AgentTwitterPostID: m.AgentTwitterPostID,
+		AgentTwitterPost:   NewAgentTwitterPostResp(m.AgentTwitterPost),
+	}
+}
+
+func NewUserVideoRespArray(arr []*models.ClankerVideoToken) []*UserVideoResp {
+	resps := []*UserVideoResp{}
+	for _, r := range arr {
+		resps = append(resps, NewUserVideoResp(r))
+	}
+	return resps
+}
+
+type TrendingTokenResp struct {
+	ChainId        string     `json:"chain_id"`
+	TokenAddress   string     `json:"token_address"`
+	Name           string     `json:"name"`
+	Symbol         string     `json:"symbol"`
+	Decimals       int        `json:"decimals"`
+	Logo           string     `json:"logo"`
+	UsdPrice       float64    `json:"usd_price"`
+	MarketCap      float64    `json:"market_cap"`
+	LiquidityUsd   float64    `json:"liquidity_usd"`
+	Holders        int        `json:"holders"`
+	MintAt         *time.Time `json:"mint_at"`
+	Volume1h       float64    `json:"volume1h"`
+	Transactions1h int        `json:"transactions1h"`
+	Buyers1h       int        `json:"buyers1h"`
+}
+
+func NewTrendingTokenResp(m *models.TrendingToken) *TrendingTokenResp {
+	if m == nil {
+		return nil
+	}
+	return &TrendingTokenResp{
+		TokenAddress:   m.TokenAddress,
+		Name:           m.Name,
+		Symbol:         m.Symbol,
+		Decimals:       m.Decimals,
+		Logo:           m.Logo,
+		UsdPrice:       m.UsdPrice,
+		MarketCap:      m.MarketCap,
+		LiquidityUsd:   m.LiquidityUsd,
+		Holders:        m.Holders,
+		MintAt:         m.MintAt,
+		Volume1h:       m.Volume1h,
+		Transactions1h: m.Transactions1h,
+		Buyers1h:       m.Buyers1h,
+		ChainId:        m.ChainId,
+	}
+}
+
+func NewTrendingTokenRespArray(arr []*models.TrendingToken) []*TrendingTokenResp {
+	resps := []*TrendingTokenResp{}
+	for _, m := range arr {
+		resps = append(resps, NewTrendingTokenResp(m))
+	}
+	return resps
+}
+
+type UserVideoInfoResp struct {
+	TwitterID   string            `json:"twitter_id"`
+	Address     string            `json:"address"`
+	UserAddress string            `json:"user_address"`
+	WalletType  models.WalletType `json:"wallet_type"`
+}
+
+func NewUserVideoInfoResp(m *models.PrivyWallet) *UserVideoInfoResp {
+	if m == nil {
+		return nil
+	}
+	return &UserVideoInfoResp{
+		Address:     m.Address,
+		TwitterID:   m.TwitterID,
+		UserAddress: m.UserAddress,
+		WalletType:  m.WalletType,
+	}
 }

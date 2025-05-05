@@ -1,0 +1,524 @@
+[
+  {
+    "inputs": [],
+    "name": "DigestAlreadyUsed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidData",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidVersion",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "Unauthenticated",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ZeroAddress",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "version",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "pIndex",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "retrieveAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "enum IAgent.FileType",
+            "name": "fileType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "string",
+            "name": "fileName",
+            "type": "string"
+          }
+        ],
+        "indexed": false,
+        "internalType": "struct IAgent.CodePointer",
+        "name": "newPointer",
+        "type": "tuple"
+      }
+    ],
+    "name": "CodePointerCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [],
+    "name": "EIP712DomainChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "version",
+        "type": "uint8"
+      }
+    ],
+    "name": "Initialized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "eip712Domain",
+    "outputs": [
+      {
+        "internalType": "bytes1",
+        "name": "fields",
+        "type": "bytes1"
+      },
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "version",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "chainId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "verifyingContract",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "salt",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "extensions",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      }
+    ],
+    "name": "getAddressByENS",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "version",
+        "type": "uint16"
+      }
+    ],
+    "name": "getAgentCode",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "code",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAgentName",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAgentOwner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getCodeLanguage",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getCurrentVersion",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "version",
+        "type": "uint16"
+      }
+    ],
+    "name": "getDepsAgents",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "retrieveAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "enum IAgent.FileType",
+            "name": "fileType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "string",
+            "name": "fileName",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct IAgent.CodePointer[]",
+        "name": "pointers",
+        "type": "tuple[]"
+      },
+      {
+        "internalType": "address[]",
+        "name": "depsAgents",
+        "type": "address[]"
+      }
+    ],
+    "name": "getHashToSign",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "agentName",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "agentVersion",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "codeLanguage",
+        "type": "string"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "retrieveAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "enum IAgent.FileType",
+            "name": "fileType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "string",
+            "name": "fileName",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct IAgent.CodePointer[]",
+        "name": "pointers",
+        "type": "tuple[]"
+      },
+      {
+        "internalType": "address[]",
+        "name": "depsAgents",
+        "type": "address[]"
+      },
+      {
+        "internalType": "address",
+        "name": "agentOwner",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "nameService",
+        "type": "bytes"
+      }
+    ],
+    "name": "initialize",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "retrieveAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "enum IAgent.FileType",
+            "name": "fileType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "string",
+            "name": "fileName",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct IAgent.CodePointer[]",
+        "name": "pointers",
+        "type": "tuple[]"
+      },
+      {
+        "internalType": "address[]",
+        "name": "depsAgents",
+        "type": "address[]"
+      }
+    ],
+    "name": "publishAgentCode",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "retrieveAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "enum IAgent.FileType",
+            "name": "fileType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "string",
+            "name": "fileName",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct IAgent.CodePointer[]",
+        "name": "pointers",
+        "type": "tuple[]"
+      },
+      {
+        "internalType": "address[]",
+        "name": "depsAgents",
+        "type": "address[]"
+      },
+      {
+        "internalType": "bytes",
+        "name": "signature",
+        "type": "bytes"
+      }
+    ],
+    "name": "publishAgentCodeWithSignature",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "registrar",
+    "outputs": [
+      {
+        "internalType": "contract IBASERegistrarController",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "duration",
+        "type": "uint256"
+      }
+    ],
+    "name": "renew",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "resolver",
+    "outputs": [
+      {
+        "internalType": "contract IResolver",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

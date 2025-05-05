@@ -141,8 +141,10 @@ func (c *Client) ParseExternalEventResp(resp *BlockChainExternalEventResp, log *
 	if err != nil {
 		return err
 	}
-	networkID := c.ChainID()
-
+	networkID, err := c.ChainID()
+	if err != nil {
+		return err
+	}
 	// ParsePoolCreated
 	{
 		logParsed, err := uniswap.ParsePoolCreated(*log)

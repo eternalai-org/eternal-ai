@@ -59,8 +59,14 @@ const (
 	AgentInfoAgentTypeKnowledgeBase AgentInfoAgentType = 2
 	AgentInfoAgentTypeEliza         AgentInfoAgentType = 3
 	AgentInfoAgentTypeZerepy        AgentInfoAgentType = 4
-	AgentInfoAgentTypeUtility       AgentInfoAgentType = 5
-	AgentInfoAgentTypeRealWorld     AgentInfoAgentType = 6
+	AgentInfoAgentTypeModel         AgentInfoAgentType = 5
+	AgentInfoAgentTypeJs            AgentInfoAgentType = 6
+	AgentInfoAgentTypePython        AgentInfoAgentType = 7
+	AgentInfoAgentTypeInfa          AgentInfoAgentType = 8
+	AgentInfoAgentTypeVideo         AgentInfoAgentType = 9
+	AgentInfoAgentTypeCustomUi      AgentInfoAgentType = 10
+	AgentInfoAgentTypeCustomPrompt  AgentInfoAgentType = 11
+	AgentInfoAgentTypeModelOnline   AgentInfoAgentType = 12
 )
 
 type (
@@ -94,6 +100,12 @@ type SocialInfo struct {
 	Fee         float64 `json:"fee"`
 }
 
+type AgentCategory struct {
+	gorm.Model
+	Name     string `gorm:"unique_index"`
+	Priority int    `gorm:"default:0"`
+}
+
 type AgentInfo struct {
 	gorm.Model
 	Version              string `gorm:"default:'1'"`
@@ -101,6 +113,8 @@ type AgentInfo struct {
 	NetworkName          string
 	OauthClientId        string
 	OauthClientSecret    string
+	AgentCategoryID      uint `gorm:"index"`
+	AgentCategory        *AgentCategory
 	AgentID              string             `gorm:"unique_index"`
 	AgentType            AgentInfoAgentType `gorm:"default:0"`
 	TwitterInfoID        uint               `gorm:"index"`
@@ -114,6 +128,7 @@ type AgentInfo struct {
 	Creator              string
 	AgentContractID      string
 	AgentContractAddress string
+	AgentLogicAddress    string
 	AgentNftMinted       bool `gorm:"default:0"`
 	ScanEnabled          bool `gorm:"default:1"`
 	ScanLatestTime       *time.Time
@@ -186,11 +201,14 @@ type AgentInfo struct {
 	Adjectives           string `gorm:"type:longtext"`
 	SocialInfo           string `gorm:"type:longtext"`
 	InferenceCalls       int64
+	PromptCalls          int64
+	InstalledCount       int64 `gorm:"default:0"`
 	ExternalChartUrl     string
 	MissionTopics        string `gorm:"type:longtext"`
 	GraphData            string `gorm:"type:longtext"`
 	ConfigData           string `gorm:"type:longtext"`
 	DeployedRefID        string
+	FactoryAddress       string
 
 	TwinTwitterUsernames    string           `gorm:"index"` // multiple twitter usernames, split by ,
 	TwinStatus              TwinStatus       `gorm:"index"`
@@ -203,7 +221,32 @@ type AgentInfo struct {
 	TwinTrainingProgress    float64 `json:"twin_training_progress"`
 	TwinTrainingMessage     string  `gorm:"type:longtext"`
 
-	SourceUrl string `gorm:"type:text"` //ipfs_ || ethfs_
+	SourceUrl        string `gorm:"type:text"` //ipfs_ || ethfs_
+	AuthenUrl        string `gorm:"type:text"`
+	DependAgents     string `gorm:"type:longtext"`
+	RequiredWallet   bool   `gorm:"default:0"`
+	RequiredEnv      bool   `gorm:"default:0"`
+	IsOnchain        bool   `gorm:"default:0"`
+	IsCustomUi       bool   `gorm:"default:0"`
+	Likes            int64  `gorm:"default:0"`
+	IsPublic         bool   `gorm:"default:1"`
+	IsStreaming      bool   `gorm:"default:1"`
+	DockerPort       string
+	RequiredInfo     string `gorm:"type:longtext"`
+	EnvExample       string `gorm:"type:longtext"`
+	ShortDescription string `gorm:"type:longtext"`
+	DisplayName      string `gorm:"type:longtext"`
+	IsForceUpdate    bool   `gorm:"default:0"`
+	CodeVersion      int    `gorm:"default:0"`
+	RunStatus        string
+	Author           string
+	Rating           float64 `gorm:"default:0"`
+	NumOfRating      int64   `gorm:"default:0"`
+	NumOfOneStar     int64   `gorm:"default:0"`
+	NumOfTwoStar     int64   `gorm:"default:0"`
+	NumOfThreeStar   int64   `gorm:"default:0"`
+	NumOfFourStar    int64   `gorm:"default:0"`
+	NumOfFiveStar    int64   `gorm:"default:0"`
 
 	MinFeeToUse numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
 	Worker      string
@@ -216,6 +259,57 @@ type AgentInfo struct {
 	Counts                    int64            `gorm:"-"`
 	AgentKBId                 uint             `json:"agent_kb_id"`
 	KnowledgeBase             *KnowledgeBase   `json:"knowledge_base" gorm:"foreignKey:AgentKBId;references:AgentInfoId"`
+}
+
+func (m *AgentInfo) IsVibeAgent() bool {
+	switch m.AgentType {
+	case AgentInfoAgentTypeModel,
+		AgentInfoAgentTypeJs,
+		AgentInfoAgentTypePython,
+		AgentInfoAgentTypeInfa,
+		AgentInfoAgentTypeCustomUi,
+		AgentInfoAgentTypeCustomPrompt,
+		AgentInfoAgentTypeModelOnline:
+		{
+			return true
+		}
+	}
+	return false
+}
+
+func (m *AgentInfo) GetCodeLanguage() string {
+	var codeLanguage string
+	switch m.AgentType {
+	case AgentInfoAgentTypeJs,
+		AgentInfoAgentTypeInfa:
+		{
+			codeLanguage = "javascript"
+		}
+	case AgentInfoAgentTypePython:
+		{
+			codeLanguage = "python"
+			if m.IsCustomUi {
+				codeLanguage = "python_custom_ui"
+			}
+		}
+	case AgentInfoAgentTypeModel:
+		{
+			codeLanguage = "model"
+		}
+	case AgentInfoAgentTypeModelOnline:
+		{
+			codeLanguage = "model_online"
+		}
+	case AgentInfoAgentTypeCustomUi:
+		{
+			codeLanguage = "custom_ui"
+		}
+	case AgentInfoAgentTypeCustomPrompt:
+		{
+			codeLanguage = "custom_prompt"
+		}
+	}
+	return codeLanguage
 }
 
 func (m *AgentInfo) GetCharacterArrayString(charactor string) []string {
@@ -310,11 +404,14 @@ type (
 )
 
 const (
-	AgentTwitterPostTypePost     AgentTwitterPostType = "post"
-	AgentTwitterPostTypeReview   AgentTwitterPostType = "review"
-	AgentTwitterPostTypeUnReview AgentTwitterPostType = "unreview"
+	AgentTwitterPostTypePost        AgentTwitterPostType = "post"
+	AgentTwitterPostTypeReview      AgentTwitterPostType = "review"
+	AgentTwitterPostTypeUnReview    AgentTwitterPostType = "unreview"
+	AgentTwitterPostTypeText2Video  AgentTwitterPostType = "text2video"
+	AgentTwitterPostTypeImage2video AgentTwitterPostType = "image2video"
 
 	AgentTwitterPostStatusNew              AgentTwitterPostStatus = "new"
+	AgentTwitterPostWaitSubmitVideoInfer   AgentTwitterPostStatus = "wait_submit_video_infer"
 	AgentTwitterPostStatusInvalid          AgentTwitterPostStatus = "invalid"
 	AgentTwitterConversationInvalid        AgentTwitterPostStatus = "conversation_invalid"
 	AgentTwitterPostStatusValid            AgentTwitterPostStatus = "valid"
@@ -328,63 +425,74 @@ const (
 	AgentTwitterPostStatusRepliedCancelled AgentTwitterPostStatus = "replied_cancelled"
 	AgentTwitterPostStatusReposted         AgentTwitterPostStatus = "reposted"
 	AgentTwitterPostStatusRepostedError    AgentTwitterPostStatus = "reposted_error"
+	AgentTwitterPostStatusDone             AgentTwitterPostStatus = "done"
 )
 
 type AgentTwitterPost struct {
 	gorm.Model
-	NetworkID             uint64
-	AgentInfoID           uint `gorm:"index"`
-	AgentInfo             *AgentInfo
-	TwitterID             string
-	TwitterUser           *TwitterUser `gorm:"foreignKey:twitter_id;AssociationForeignKey:twitter_id"`
-	TwitterUsername       string
-	TwitterName           string
-	TwitterPostID         string           `gorm:"unique_index"`
-	TwitterConversationId string           `gorm:"index"`
-	TwitterParentPostID   string           `gorm:"index"`
-	TwitterParentPost     *UserTwitterPost `gorm:"foreignKey:twitter_parent_post_id;AssociationForeignKey:twitter_post_id"`
-	Type                  AgentTwitterPostType
-	PostType              AgentSnapshotPostActionType
-	PostAt                *time.Time `gorm:"index"`
-	Content               string     `gorm:"type:longtext"`
-	ExtractContent        string     `gorm:"type:longtext"`
-	InferData             string     `gorm:"type:longtext"`
-	ReplyContent          string     `gorm:"type:longtext"`
-	ReplyPostId           string     `gorm:"index"`
-	ReplyPostIds          string     `gorm:"type:text"`
-	RePostId              string
-	ImageUrl              string
-	InferTxHash           string
-	InferAt               *time.Time
-	InferNum              uint                   `gorm:"default:0"`
-	Status                AgentTwitterPostStatus `gorm:"index"`
-	Prompt                string                 `gorm:"type:longtext"`
-	Error                 string                 `gorm:"type:longtext"`
-	FollowerCount         uint                   `gorm:"default:0"`
-	ReplyPostAt           *time.Time
-	ReplyPostReply        int
-	ReplyPostView         int
-	ReplyPostFavorite     int
-	ReplyPostBookmark     int
-	ReplyPostQuote        int
-	ReplyPostRetweet      int
-	RePostAt              *time.Time
-	InscribeTxHash        string
-	BitcoinTxHash         string
-	ReplyScheduleAt       *time.Time
-	Fee                   numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	IsMigrated            bool             `gorm:"default:0"`
-	TokenName             string
-	TokenSymbol           string
-	TokenAddress          string
-	TokenImageUrl         string
-	TokenDesc             string `gorm:"type:longtext"`
-	TokenImageInferID     string
-	TokenSignature        string
-	IsCreateAgent         bool `gorm:"default:0"`
-	AgentChain            string
-	OwnerUsername         string
-	OwnerTwitterID        string
+	NetworkID                 uint64
+	AgentInfoID               uint `gorm:"index"`
+	AgentInfo                 *AgentInfo
+	TwitterID                 string
+	TwitterUser               *TwitterUser `gorm:"foreignKey:twitter_id;AssociationForeignKey:twitter_id"`
+	TwitterUsername           string
+	TwitterName               string
+	TwitterPostID             string           `gorm:"unique_index"`
+	TwitterConversationId     string           `gorm:"index"`
+	TwitterParentPostID       string           `gorm:"index"`
+	TwitterParentPost         *UserTwitterPost `gorm:"foreignKey:twitter_parent_post_id;AssociationForeignKey:twitter_post_id"`
+	Type                      AgentTwitterPostType
+	PostType                  AgentSnapshotPostActionType
+	PostAt                    *time.Time `gorm:"index"`
+	Content                   string     `gorm:"type:longtext"`
+	ExtractContent            string     `gorm:"type:longtext"`
+	ExtractMediaContent       string
+	InferData                 string `gorm:"type:longtext"`
+	ReplyContent              string `gorm:"type:longtext"`
+	ReplyPostId               string `gorm:"index"`
+	ReplyPostIds              string `gorm:"type:text"`
+	RePostId                  string
+	ImageUrl                  string
+	InferTxHash               string
+	InferId                   string
+	InferMagicId              string
+	InferMagicTxHash          string
+	SubmitSolutionTxHash      string
+	SubmitSolutionMagicTxHash string
+	InferAt                   *time.Time
+	InferNum                  uint                   `gorm:"default:0"`
+	Status                    AgentTwitterPostStatus `gorm:"index"`
+	Prompt                    string                 `gorm:"type:longtext"`
+	Error                     string                 `gorm:"type:longtext"`
+	FollowerCount             uint                   `gorm:"default:0"`
+	ReplyPostAt               *time.Time
+	ReplyPostReply            int
+	ReplyPostView             int
+	ReplyPostFavorite         int
+	ReplyPostBookmark         int
+	ReplyPostQuote            int
+	ReplyPostRetweet          int
+	RePostAt                  *time.Time
+	InscribeTxHash            string
+	BitcoinTxHash             string
+	ReplyScheduleAt           *time.Time
+	Fee                       numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	IsMigrated                bool             `gorm:"default:0"`
+	TokenName                 string
+	TokenSymbol               string
+	TokenAddress              string
+	TokenImageUrl             string
+	TokenDesc                 string `gorm:"type:longtext"`
+	TokenImageInferID         string
+	TokenSignature            string
+	IsCreateAgent             bool `gorm:"default:0"`
+	AgentChain                string
+	OwnerUsername             string
+	OwnerTwitterID            string
+}
+
+func (m AgentTwitterPost) IsValidSubmitVideoInfer() bool {
+	return m.PostType == AgentSnapshotPostActionTypeGenerateVideo && m.Status == AgentTwitterPostWaitSubmitVideoInfer
 }
 
 func (m *AgentTwitterPost) GetAgentOnwerName() string {
@@ -414,6 +522,9 @@ type TweetParseInfo struct {
 	IsIntellect   bool
 	IsCreateAgent bool
 	Description   string
+
+	IsGenerateVideo      bool
+	GenerateVideoContent string
 }
 
 type UserTwitterPost struct {
@@ -509,6 +620,7 @@ const (
 	AgentEaiTopupTypeSpent           AgentEaiTopupType = "spent"
 	AgentEaiTopupTypeRefund          AgentEaiTopupType = "refund"
 	AgentEaiTopupTypeRefundTrainFail AgentEaiTopupType = "refund_train_fail"
+	AgentEaiTopupTypeTransfer        AgentEaiTopupType = "transfer"
 
 	AgentEaiTopupStatusNew        AgentEaiTopupStatus = "new"
 	AgentEaiTopupStatusProcessing AgentEaiTopupStatus = "processing"
@@ -605,12 +717,11 @@ type AgentExternalInfo struct {
 
 type AgentChainFee struct {
 	gorm.Model
-	NetworkID               uint64           `gorm:"unique_index"`
-	InferFee                numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	MintFee                 numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	TokenFee                numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	RealworldAgentDeployFee numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	UtilityAgentDeployFee   numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	NetworkID      uint64           `gorm:"unique_index"`
+	InferFee       numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	MintFee        numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	TokenFee       numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	AgentDeployFee numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
 }
 
 type AgentStudioChildren struct {
@@ -656,4 +767,62 @@ type AgentInfoInstall struct {
 	User           *User
 	CallbackParams string `gorm:"type:longtext"` //{"user_id" : "123", "authen_token" : "xxx",...}
 	Status         AgenInfoInstallStatus
+}
+
+type AgentUtilityInstall struct {
+	gorm.Model
+	Address     string `gorm:"unique_index:agent_utility_install_main_idx"`
+	AgentInfoID uint   `gorm:"unique_index:agent_utility_install_main_idx"`
+}
+
+type AgentUtilityRecentChat struct {
+	gorm.Model
+	Address     string `gorm:"unique_index:agent_utility_recent_chat_main_idx"`
+	AgentInfoID uint   `gorm:"unique_index:agent_utility_recent_chat_main_idx"`
+}
+
+type (
+	WalletType string
+)
+
+const (
+	WalletTypePrivy    WalletType = "privy"
+	WalletTypeInternal WalletType = "internal"
+)
+
+type PrivyWallet struct {
+	gorm.Model
+	PrivyID     string     `gorm:"unique_index"`
+	TwitterID   string     `gorm:"unique_index"`
+	Address     string     `gorm:"index"`
+	UserAddress string     `gorm:"index"`
+	WalletType  WalletType `gorm:"default:'privy'"`
+}
+
+type ClankerVideoToken struct {
+	gorm.Model
+	TokenName          string
+	TokenSymbol        string
+	TokenAddress       string
+	TokenStatus        string
+	TokenImageUrl      string
+	VideoUrl           string
+	TokenDesc          string       `gorm:"type:longtext"`
+	PairAddress        string       `gorm:"index"`
+	UserAddress        string       `gorm:"index"`
+	OwnerTwitterID     string       `gorm:"index"`
+	OwnerTwitterInfo   *TwitterUser `gorm:"foreignKey:twitter_id;AssociationForeignKey:owner_twitter_id"`
+	AgentTwitterPostID uint         `gorm:"unique_index"`
+	AgentTwitterPost   *AgentTwitterPost
+	RequestorAddress   string `gorm:"index"`
+	RequestKey         string
+	TxHash             string
+	Error              string
+}
+
+type AgentReactionHistory struct {
+	gorm.Model
+	AgentInfoID uint   `gorm:"index"`
+	UserAddress string `gorm:"index"`
+	Reaction    string
 }

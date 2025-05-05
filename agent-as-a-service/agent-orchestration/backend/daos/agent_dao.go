@@ -252,3 +252,14 @@ func (d *DAO) FirstAbilityLuckyMoneyByID(tx *gorm.DB, id uint, preloads map[stri
 	}
 	return &m, nil
 }
+
+func (d *DAO) FirstAgentReactionHistory(tx *gorm.DB, filters map[string][]interface{}, preloads map[string][]interface{}, orders []string) (*models.AgentReactionHistory, error) {
+	var m models.AgentReactionHistory
+	if err := d.first(tx, &m, filters, preloads, orders, false); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &m, nil
+}

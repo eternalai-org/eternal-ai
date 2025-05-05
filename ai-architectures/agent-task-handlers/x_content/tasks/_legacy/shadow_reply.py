@@ -70,6 +70,7 @@ class ShadowReplyTask(MultiStepTaskBase):
                 info_resp = await twitter_v2.get_relevent_information_v2(
                     self.kn_base,
                     tweets=tweets_context,
+                    task_name=log.task,
                 )
 
                 knowledge_v2 = (
@@ -107,7 +108,9 @@ class ShadowReplyTask(MultiStepTaskBase):
                 for conversation_thread in log.execute_info["conversation"]
             ]
 
-            for idx, infer in enumerate(await asyncio.gather(*futures, return_exceptions=True)):
+            for idx, infer in enumerate(
+                await asyncio.gather(*futures, return_exceptions=True)
+            ):
                 if isinstance(infer, Exception):
                     logger.info(
                         f"[{log.id}] Error while processing index {idx}: {infer} (inference fails)."
@@ -115,7 +118,9 @@ class ShadowReplyTask(MultiStepTaskBase):
                     continue
 
                 infer: OnchainInferResult
-                result = post_process_tweet(infer.generations[0].message.content)
+                result = post_process_tweet(
+                    infer.generations[0].message.content
+                )
                 liked_tweet = log.execute_info["tweets"][idx]["tweet_object"]
                 liked_tweet_id = liked_tweet["tweet_id"]
 
@@ -135,7 +140,9 @@ class ShadowReplyTask(MultiStepTaskBase):
                 )
 
             return await a_move_state(
-                log, MissionChainState.DONE, f"Replied to all {len(futures)} liked tweets"
+                log,
+                MissionChainState.DONE,
+                f"Replied to all {len(futures)} liked tweets",
             )
 
         return log

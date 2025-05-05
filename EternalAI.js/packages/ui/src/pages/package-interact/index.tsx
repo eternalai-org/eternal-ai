@@ -1,10 +1,18 @@
-import { Interact } from "@eternalai.js/interact";
+import { ChainId, Interact } from "@eternalai.js/interact";
 import "./Styles.css";
 import { ethers } from "ethers";
 import {
   InferPayloadWithPrompt,
   InferPayloadWithMessages,
 } from "@eternalai.js/interact/dist/types";
+
+const AGENT_CONTRACT_ADDRESSES: Record<ChainId, string> = {
+  [ChainId.BSC]: "0x3B9710bA5578C2eeD075D8A23D8c596925fa4625",
+  [ChainId.BASE]: "0x1E65FCa9b6640bC87AE41f1a897762c334821D1C",
+};
+
+// const wallet = new ethers.Wallet("Your private key here");
+const wallet = ethers.Wallet.createRandom();
 
 function PackageInteract() {
   return (
@@ -21,11 +29,10 @@ function PackageInteract() {
             onClick={async () => {
               {
                 const inferPayload = {
-                  chainId: 56,
-                  model: "NousResearch/Hermes-3-Llama-3.1-70B-FP8",
+                  chainId: ChainId.BASE,
+                  agentAddress: AGENT_CONTRACT_ADDRESSES[ChainId.BASE],
                   prompt: "test",
                 } satisfies InferPayloadWithPrompt;
-                const wallet = ethers.Wallet.createRandom();
                 const interact = new Interact(wallet);
                 await interact.infer(inferPayload);
               }
@@ -37,8 +44,8 @@ function PackageInteract() {
             onClick={async () => {
               {
                 const inferPayload = {
-                  chainId: 56,
-                  model: "NousResearch/Hermes-3-Llama-3.1-70B-FP8",
+                  chainId: ChainId.BASE,
+                  agentAddress: AGENT_CONTRACT_ADDRESSES[ChainId.BASE],
                   messages: [
                     {
                       role: "system",
@@ -50,7 +57,6 @@ function PackageInteract() {
                     },
                   ],
                 } satisfies InferPayloadWithMessages;
-                const wallet = ethers.Wallet.createRandom();
                 const interact = new Interact(wallet);
                 await interact.infer(inferPayload);
               }

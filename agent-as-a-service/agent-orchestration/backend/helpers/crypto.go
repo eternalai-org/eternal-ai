@@ -95,3 +95,11 @@ func ERC20PermitSignature(pk *ecdsa.PrivateKey, domainSeparator, owner, spender 
 	copy(s[:], sig[32:64])
 	return v, r, s, nil
 }
+
+func HexToBytes32(hex string) [32]byte {
+	bytes := common.HexToHash(hex)
+	if len(bytes) != 32 {
+		panic("wrong bytes")
+	}
+	return bytes
+}

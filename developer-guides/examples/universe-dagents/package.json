@@ -12,7 +12,8 @@
     "sendUniverseAgentRequest:polygon_mainnet": "npx hardhat run scripts/sendUniverseAgentRequest.ts --network polygon_mainnet",
     "sendUniverseAgentRequest:ethereum_mainnet": "npx hardhat run scripts/sendUniverseAgentRequest.ts --network ethereum_mainnet",
     "sendUniverseAgentRequest:hyper_mainnet": "npx hardhat run scripts/sendUniverseAgentRequest.ts --network hyper_mainnet",
-    "sendUniverseAgentRequest:avax_mainnet": "npx hardhat run scripts/sendUniverseAgentRequest.ts --network avax_mainnet"
+    "sendUniverseAgentRequest:avax_mainnet": "npx hardhat run scripts/sendUniverseAgentRequest.ts --network avax_mainnet",
+    "sendUniverseAgentRequest:megaeth_testnet": "npx hardhat run scripts/sendUniverseAgentRequest.ts --network megaeth_testnet"
   },
   "devDependencies": {
     "@ericxstone/hardhat-blockscout-verify": "^1.0.2",

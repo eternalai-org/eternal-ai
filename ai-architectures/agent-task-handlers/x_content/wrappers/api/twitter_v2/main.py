@@ -89,6 +89,7 @@ def _get_shadow_reply_redis_cache():
 def _get_tweet_inscription_redis_cache():
     return TweetInscriptionRedisCache()
 
+
 def _preprocess_username(username: str):
     username = username.lstrip("@")
     if username.startswith("username="):
@@ -233,6 +234,7 @@ def optimize_twitter_query(
             res += ee
 
     return res
+
 
 @log_function_call
 def search_twitter_news(
@@ -519,7 +521,6 @@ def get_recent_mentioned_tweets_by_username_v2(
         return Response(error=f"An unexpected error occured")
 
 
-
 # TODO: Combine this and get_tweets_by_username_v2
 def get_tweets_by_username(
     username: str,
@@ -717,11 +718,13 @@ async def get_relevent_information_v2(
     kn_base: KnowledgeBase,
     tweet_id: str = None,
     tweets: List[TweetObject] = None,
+    task_name: str = "N/A",
+    use_bing_search: bool = True,
 ) -> Response[StructuredInformationDto]:
-    if tweets is None:
-        if tweet_id is None:
-            return Response(error="Either tweet_id or tweets must be provided")
+    if tweets is None and tweet_id is None:
+        return Response(error="Either tweet_id or tweets must be provided")
 
+    if tweets is None:
         resp: Response[ExtendedTweetInfosDto] = await sync2async(
             get_full_context_by_tweet_id
         )(tweet_id)
@@ -755,7 +758,11 @@ async def get_relevent_information_v2(
     knowledge = await search_from_db(
         kn_base, retrieval_query, top_k=5, threshold=0.85
     )
-    bing_news = await sync2async(search_from_bing)(retrieval_query, top_k=10)
+    bing_news = []
+    if use_bing_search:
+        bing_news = await sync2async(search_from_bing)(
+            retrieval_query, top_k=10, task_name=task_name
+        )
     twitter_resp: Response[TweetsDto] = await sync2async(search_twitter_news)(
         retrieval_query,
         limit_api_results=10,

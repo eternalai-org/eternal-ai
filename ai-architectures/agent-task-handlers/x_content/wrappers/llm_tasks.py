@@ -277,14 +277,14 @@ def choose_suitable_language(chat_history: list) -> str:
         {"role": "user", "content": chat_history},
     ]
 
-    url = const.SELF_HOSTED_HERMES_70B_URL + "/v1/chat/completions"
+    url = const.SELF_HOSTED_LLAMA_405B_URL + "/v1/chat/completions"
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {const.SELF_HOSTED_LLAMA_API_KEY}",
     }
 
     data = {
-        "model": const.SELF_HOSTED_HERMES_70B_MODEL_IDENTITY,
+        "model": const.SELF_HOSTED_LLAMA_405B_MODEL_IDENTITY,
         "messages": conversation,
         "max_tokens": 100,
         "temperature": 0,
@@ -323,9 +323,9 @@ Your response **must** be in stringified JSON format, with the following structu
         {"role": "user", "content": formatted_chat_history},
     ]
 
-    llama_url = const.SELF_HOSTED_HERMES_70B_URL
+    llama_url = const.SELF_HOSTED_LLAMA_405B_URL
     llama_api_key = const.SELF_HOSTED_LLAMA_API_KEY
-    llama_model_identity = const.SELF_HOSTED_HERMES_70B_MODEL_IDENTITY
+    llama_model_identity = const.SELF_HOSTED_LLAMA_405B_MODEL_IDENTITY
 
     if not all([llama_url, llama_api_key, llama_model_identity]):
         logger.error(
@@ -414,9 +414,9 @@ Here is the input tweet: {}
         model = SyncBasedEternalAI(
             max_tokens=const.DEFAULT_MAX_OUTPUT_TOKENS,
             temperature=0.7,
-            base_url=const.SELF_HOSTED_HERMES_70B_URL + "/v1",
+            base_url=const.SELF_HOSTED_LLAMA_405B_URL + "/v1",
             api_key=const.SELF_HOSTED_LLAMA_API_KEY,
-            model=const.SELF_HOSTED_HERMES_70B_MODEL_IDENTITY,
+            model=const.SELF_HOSTED_LLAMA_405B_MODEL_IDENTITY,
             seed=random.randint(1, int(1e9)),
         )
 
@@ -480,23 +480,23 @@ Provide your response in the following JSON format:
 
 {
   "hashtags": {
-    "included": [true/false],
-    "excluded": [true/false],
+    "included": <true or false>,
+    "excluded": <true or false>,
     "reason": "Explain why hashtags are/are not required to be included or excluded."
   },
   "urls": {
-    "included": [true/false],
-    "excluded": [true/false],
+    "included": <true or false>,
+    "excluded": <true or false>,
     "reason": "Explain why URLs are/are not required to be included or excluded."
   },
   "emojis": {
-    "included": [true/false],
-    "excluded": [true/false],
+    "included": <true or false>,
+    "excluded": <true or false>,
     "reason": "Explain why emojis are/are not required to be included or excluded."
   },
   "mentions": {
-    "included": [true/false],
-    "excluded": [true/false],
+    "included": <true or false>,
+    "excluded": <true or false>,
     "reason": "Explain why mentions are/are not required to be included or excluded."
   }
 }
@@ -532,13 +532,15 @@ Task prompt: {task_prompt}
         model = SyncBasedEternalAI(
             max_tokens=const.DEFAULT_MAX_OUTPUT_TOKENS,
             temperature=0.7,
-            base_url=const.SELF_HOSTED_HERMES_70B_URL + "/v1",
+            base_url=const.SELF_HOSTED_LLAMA_405B_URL + "/v1",
             api_key=const.SELF_HOSTED_LLAMA_API_KEY,
-            model=const.SELF_HOSTED_HERMES_70B_MODEL_IDENTITY,
+            model=const.SELF_HOSTED_LLAMA_405B_MODEL_IDENTITY,
             seed=random.randint(1, int(1e9)),
         )
         result = model.generate(messages).generations[0].text
         result = repair_json(result, return_objects=True)
+
+        print("result:", result)
 
         obj = IncludeExcludeInfo.model_validate(result)
         return obj
@@ -560,7 +562,7 @@ def clean_text(crawled_text: str):
         "cleaned_text": "Your cleaned and summarized text here"
     }
     """
-    url = os.path.join(const.SELF_HOSTED_HERMES_70B_URL, "v1/chat/completions")
+    url = os.path.join(const.SELF_HOSTED_LLAMA_405B_URL, "v1/chat/completions")
 
     headers = {
         "Content-Type": "application/json",
@@ -568,7 +570,7 @@ def clean_text(crawled_text: str):
     }
 
     data = {
-        "model": const.SELF_HOSTED_HERMES_70B_MODEL_IDENTITY,
+        "model": const.SELF_HOSTED_LLAMA_405B_MODEL_IDENTITY,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": crawled_text[: const.MAX_TEXT_LENGTH]},
@@ -658,9 +660,9 @@ def extract_content_relevant_to_query(query: str, contents: List[str]):
         model = SyncBasedEternalAI(
             max_tokens=const.DEFAULT_MAX_OUTPUT_TOKENS,
             temperature=0.7,
-            base_url=const.SELF_HOSTED_HERMES_70B_URL + "/v1",
+            base_url=const.SELF_HOSTED_LLAMA_405B_URL + "/v1",
             api_key=const.SELF_HOSTED_LLAMA_API_KEY,
-            model=const.SELF_HOSTED_HERMES_70B_MODEL_IDENTITY,
+            model=const.SELF_HOSTED_LLAMA_405B_MODEL_IDENTITY,
             seed=random.randint(1, int(1e9)),
         )
         result = model.generate(messages).generations[0].text
@@ -677,33 +679,39 @@ def extract_content_relevant_to_query(query: str, contents: List[str]):
     return obj
 
 
-SUMMARIZE_JUDGE_COMMENTARY_PROMPT = """Act as an expert in concise summarization and information distillation. You specialize in extracting key insights from detailed texts and condensing them into clear, engaging, and precise summaries while maintaining the original meaning.
+SUMMARIZE_JUDGE_COMMENTARY_PROMPT = """Act as an expert in extracting key insights and delivering sharp, impactful summaries. Your role is to distill a judge’s detailed commentary from a QA game into a concise yet compelling evaluation summary while preserving clarity and essential details.
 
 ## Task
-Your task is to analyze a detailed commentary that evaluates the answers of multiple users in a QA game and declares a winner. Then, summarize only the evaluation process, avoiding any mention of the specific judging criteria. Ensure that:
-- The winning user's name is always included.
-- The reason for their victory is clearly stated.
-- The summary stays within 256 characters.
+Analyze the judge’s commentary, summarize their evaluation process, and explain the decision-making. Your summary must:
+- Always include the winning user's name.
+- Clearly state why they won.
+- Support multiple reasons, each within 255 characters.
+- Avoid mentioning specific judging criteria.
 
 ## Context
-- The summary should focus only on how the judge conducted the evaluation and reached a decision.
-- Do not include details about the specific criteria used for judgment.
-- The summary must not exceed 256 characters while preserving clarity and completeness.
-- The summary should be neutral, concise, and easy to understand.
+- Focus only on how the judge assessed the responses and reached a decision.
+- Do not reference specific scoring metrics or criteria.
+- Ensure each reason is independent and concise (≤255 characters per reason).
+- Keep the language clear, neutral, and engaging.
 
 ## Response Format
-Provide the final output as a JSON object containing the summary tweet in a single field:
+Return a JSON object with multiple reasons in separate fields:
 
 {{
-  "summary": "<Your summarized text here>"
+  "summary": {{
+    "1 ": "<First reason within 255 characters>",
+    "2 ": "<Second reason within 255 characters>",
+    "3 ": "<Third reason within 255 characters>",
+    ...
+  }}
 }}
 
-## Guidelines for Summarization
-1. Focus on the Process: Describe how the judge reviewed, compared, and deliberated before making a decision.
-2. Always Include the Winner: Clearly state the name of the winning user.
-3. Explain Why They Won: Give a general reason for their victory without mentioning specific judging criteria.
-4. Be Concise Yet Informative: The summary must be under 256 characters while maintaining clarity.
-5. Ensure Readability: The summary should be coherent, structured, and easy to understand.
+## Summarization Guidelines
+1. **Emphasize the Process**: Explain how the judge reviewed, compared, and deliberated.
+2. **Include the Winner**: Clearly mention who won.
+3. **State Multiple Reasons**: Provide distinct, compelling reasons (≤255 characters each).
+4. **Maximize Impact**: Use strong, direct language while staying neutral and precise.
+5. **Ensure Readability**: Keep sentences structured, fluid, and engaging.
 
 ## Provided Input
 Commentary: {commentary}
@@ -730,9 +738,9 @@ def summarize_judge_commentary(commentary: str) -> str:
         model = SyncBasedEternalAI(
             max_tokens=const.DEFAULT_MAX_OUTPUT_TOKENS,
             temperature=0.7,
-            base_url=const.SELF_HOSTED_HERMES_70B_URL + "/v1",
+            base_url=const.SELF_HOSTED_LLAMA_405B_URL + "/v1",
             api_key=const.SELF_HOSTED_LLAMA_API_KEY,
-            model=const.SELF_HOSTED_HERMES_70B_MODEL_IDENTITY,
+            model=const.SELF_HOSTED_LLAMA_405B_MODEL_IDENTITY,
             seed=random.randint(1, int(1e9)),
         )
         result = model.generate(messages).generations[0].text

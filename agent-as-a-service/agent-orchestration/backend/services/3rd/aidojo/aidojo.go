@@ -418,7 +418,11 @@ func (c AiDojoBackend) GenerateImage(systemContent, baseUrl string) (string, err
 	if err != nil {
 		return chatResp, err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{
+		Timeout: 20 * time.Second,
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return chatResp, err
 	}

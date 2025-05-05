@@ -83,6 +83,7 @@ const (
 	AgentSnapshotPostActionTypeReplyMultiUnlimited AgentSnapshotPostActionType = "reply_multi_unlimited"
 	AgentSnapshotPostActionTypeCreateToken         AgentSnapshotPostActionType = "create_token"
 	AgentSnapshotPostActionTypeCreateAgent         AgentSnapshotPostActionType = "create_agent"
+	AgentSnapshotPostActionTypeGenerateVideo       AgentSnapshotPostActionType = "generate_video"
 	AgentSnapshotPostActionTypeQuoteTweet          AgentSnapshotPostActionType = "quote_tweet"
 	AgentSnapshotPostActionTypeInscribeTweet       AgentSnapshotPostActionType = "inscribe_tweet"
 	AgentSnapshotPostActionTypeTweetV2             AgentSnapshotPostActionType = "tweet_v2"

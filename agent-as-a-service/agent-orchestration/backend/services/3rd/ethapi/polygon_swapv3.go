@@ -158,7 +158,7 @@ func (c *Client) PolygonNonfungiblePositionManagerMint(contractAddr string, priv
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), addressHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), addressHex)
 	if err != nil {
 		return "", err
 	}

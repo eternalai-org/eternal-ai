@@ -51,7 +51,12 @@ async function sendUniverseAgentRequest() {
     "IHybridModel"
   )) as unknown as IHybridModel;
 
-  const request = buildRequest(inf.modelInfo.modelName, userPrompt);
+  let request = "";
+  if (chosenModel === "wan2.1") {
+    request = userPrompt;
+  } else {
+    request = buildRequest(inf.modelInfo.modelName, userPrompt);
+  }
 
   // Send inference request
   let feeData;
@@ -78,6 +83,7 @@ async function sendUniverseAgentRequest() {
   // Get inference result
   let inferResult;
   let inferId = 0;
+
   if (receipt?.status == 1) {
     // Get inference ID
     inferId = getInferId(receipt, inf.promptSchedulerAddress)[0];
@@ -86,7 +92,7 @@ async function sendUniverseAgentRequest() {
 
     // Wait for inference result
     while (true) {
-      await sleep(30000);
+      await sleep(20000);
       try {
         inferResult = await tryToGetInferenceResult(
           chosenNetwork,
@@ -97,7 +103,6 @@ async function sendUniverseAgentRequest() {
 
         break;
       } catch (e: any) {
-        // console.log(e.message.split(": ")[1].split(" ()[0]);
         console.log(e.message);
         continue;
       }

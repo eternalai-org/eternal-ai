@@ -8,7 +8,7 @@ type Props = {};
 const MainLayout = (props: Props & PropsWithChildren) => {
   const { children } = props;
   return (
-    <Flex className={s.container} flexDirection={"column"}>
+    <Flex className={s.container}>
       <Header />
       <Box className={s.content}>{children}</Box>
     </Flex>

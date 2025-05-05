@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -25,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/jinzhu/gorm"
+	"github.com/sashabaranov/go-openai"
 )
 
 func (s *Service) GetModelDefaultByChainID(chainID uint64) string {
@@ -56,27 +58,9 @@ func (s *Service) AgentCreateAgentAssistant(ctx context.Context, address string,
 	if req.SystemContent == "" {
 		req.SystemContent = "default"
 	}
-	switch req.AgentType {
-	case models.AgentInfoAgentTypeRealWorld,
-		models.AgentInfoAgentTypeUtility:
-		{
-			switch req.ChainID {
-			case models.BASE_CHAIN_ID,
-				models.ARBITRUM_CHAIN_ID,
-				models.BSC_CHAIN_ID,
-				models.APE_CHAIN_ID,
-				models.AVALANCHE_C_CHAIN_ID:
-				{
-				}
-			default:
-				{
-					return nil, errs.ErrBadRequest
-				}
-			}
-		}
-	}
 	agent := &models.AgentInfo{
 		Version:          "2",
+		AgentCategoryID:  req.CategoryID,
 		AgentType:        models.AgentInfoAgentTypeReasoning,
 		AgentID:          helpers.RandomBigInt(12).Text(16),
 		Status:           models.AssistantStatusPending,
@@ -107,9 +91,46 @@ func (s *Service) AgentCreateAgentAssistant(ctx context.Context, address string,
 		MissionTopics:    req.MissionTopics,
 		ConfigData:       req.ConfigData,
 		SourceUrl:        req.SourceUrl,
+		AuthenUrl:        req.AuthenUrl,
+		DependAgents:     req.DependAgents,
+		EnvExample:       req.EnvExample,
+		CodeVersion:      1,
+		Author:           req.Author,
+	}
+	if req.RequiredEnv != nil {
+		agent.RequiredEnv = *req.RequiredEnv
+	}
+
+	if req.RequiredWallet != nil {
+		agent.RequiredWallet = *req.RequiredWallet
+	}
+	if req.IsOnchain != nil {
+		agent.IsOnchain = *req.IsOnchain
+	}
+	if req.IsStreaming != nil {
+		agent.IsStreaming = *req.IsStreaming
+	}
+	if req.IsCustomUi != nil {
+		agent.IsCustomUi = *req.IsCustomUi
+	}
+	if req.RequiredInfo != nil {
+		agent.RequiredInfo = *req.RequiredInfo
+	}
+	if req.InferFee != nil {
+		inferFee := numeric.NewBigFloatFromString(*req.InferFee)
+		agent.InferFee = inferFee
+	}
+	if req.DisplayName != "" {
+		agent.DisplayName = req.DisplayName
+	}
+	if req.ShortDescription != "" {
+		agent.ShortDescription = req.ShortDescription
 	}
 	agent.MinFeeToUse = req.MinFeeToUse
 	agent.Worker = req.Worker
+	if req.IsForceUpdate != nil {
+		agent.IsForceUpdate = *req.IsForceUpdate
+	}
 
 	tokenInfo, _ := s.GenerateTokenInfoFromSystemPrompt(ctx, req.AgentName, req.SystemContent)
 	if tokenInfo != nil && tokenInfo.TokenSymbol != "" {
@@ -119,6 +140,9 @@ func (s *Service) AgentCreateAgentAssistant(ctx context.Context, address string,
 		if req.TokenImageUrl == "" {
 			agent.TokenImageUrl = tokenInfo.TokenImageUrl
 		}
+	} else {
+		agent.TokenName = req.AgentName
+		agent.TokenSymbol = helpers.GenerateTokenSymbol(req.AgentName)
 	}
 
 	if req.CreateTokenMode == models.CreateTokenModeTypeLinkExisting {
@@ -222,6 +246,14 @@ func (s *Service) AgentCreateAgentAssistant(ctx context.Context, address string,
 
 	if req.AgentType > 0 {
 		agent.AgentType = req.AgentType
+		if req.AgentType == models.AgentInfoAgentTypeModel ||
+			req.AgentType == models.AgentInfoAgentTypeModelOnline ||
+			req.AgentType == models.AgentInfoAgentTypeJs ||
+			req.AgentType == models.AgentInfoAgentTypePython ||
+			req.AgentType == models.AgentInfoAgentTypeCustomUi ||
+			req.AgentType == models.AgentInfoAgentTypeCustomPrompt {
+			agent.IsPublic = false
+		}
 	}
 
 	if req.CreateKnowledgeRequest != nil {
@@ -279,6 +311,10 @@ func (s *Service) AgentCreateAgentAssistant(ctx context.Context, address string,
 		oKb, _ := s.KnowledgeUsecase.GetKnowledgeBaseById(ctx, kb.ID)
 		agent.KnowledgeBase = oKb
 		s.KnowledgeUsecase.SendMessage(ctx, fmt.Sprintf("Create KB Agent DONE  %s (%d)", agent.AgentName, agent.ID), 0)
+	}
+
+	if agent.IsVibeAgent() {
+		go s.CreateTokenInfoVibe(context.Background(), agent.ID)
 	}
 
 	return agent, nil
@@ -466,11 +502,67 @@ func (s *Service) AgentUpdateAgentAssistant(ctx context.Context, address string,
 				agent.Style = req.GetAssistantCharacter(req.Style)
 				agent.Adjectives = req.GetAssistantCharacter(req.Adjectives)
 				agent.SocialInfo = req.GetAssistantCharacter(req.SocialInfo)
-				agent.SourceUrl = req.SourceUrl
-				agent.MinFeeToUse = req.MinFeeToUse
-				agent.Worker = req.Worker
+
+				if req.EnvExample != "" {
+					agent.EnvExample = req.EnvExample
+				}
+
+				if req.RequiredEnv != nil {
+					agent.RequiredEnv = *req.RequiredEnv
+				}
+
+				if req.SourceUrl != "" {
+					agent.SourceUrl = req.SourceUrl
+				}
+				if req.AuthenUrl != "" {
+					agent.AuthenUrl = req.AuthenUrl
+				}
+				if req.DependAgents != "" {
+					agent.DependAgents = req.DependAgents
+				}
+				if req.RequiredWallet != nil {
+					agent.RequiredWallet = *req.RequiredWallet
+				}
+				if req.IsOnchain != nil {
+					agent.IsOnchain = *req.IsOnchain
+				}
+				if req.IsStreaming != nil {
+					agent.IsStreaming = *req.IsStreaming
+				}
+				if req.IsCustomUi != nil {
+					agent.IsCustomUi = *req.IsCustomUi
+				}
+				if req.RequiredInfo != nil {
+					agent.RequiredInfo = *req.RequiredInfo
+				}
+				if req.InferFee != nil {
+					inferFee := numeric.NewBigFloatFromString(*req.InferFee)
+					agent.InferFee = inferFee
+				}
+				if req.MinFeeToUse.Cmp(big.NewFloat(0)) > 0 {
+					agent.MinFeeToUse = req.MinFeeToUse
+				}
+				if req.Worker != "" {
+					agent.Worker = req.Worker
+				}
 				if req.TokenImageUrl != "" {
 					agent.TokenImageUrl = req.TokenImageUrl
+				}
+				if req.DisplayName != "" {
+					agent.DisplayName = req.DisplayName
+				}
+				if req.ShortDescription != "" {
+					agent.ShortDescription = req.ShortDescription
+				}
+				if req.CategoryID != 0 {
+					agent.AgentCategoryID = req.CategoryID
+				}
+				if req.IsForceUpdate != nil {
+					agent.IsForceUpdate = *req.IsForceUpdate
+				}
+
+				if req.Author != "" {
+					agent.Author = req.Author
 				}
 
 				if agent.TokenStatus == "" && agent.TokenAddress == "" {
@@ -675,7 +767,21 @@ func (s *Service) GenerateTokenInfoFromSystemPrompt(ctx context.Context, tokenNa
 
 						Please return in string in json format including token-name, token-symbol, token-story, just only json without explanation  and token name limit with 15 characters
 					`, sysPrompt)
-	aiStr, err := s.openais["Lama"].ChatMessage(promptGenerateToken)
+	// aiStr, err := s.openais["Lama"].ChatMessage(promptGenerateToken)
+	// if err != nil {
+	// 	return nil, errs.NewError(err)
+	// }
+	message := []openai.ChatCompletionMessage{
+		openai.ChatCompletionMessage{
+			Role:    "system",
+			Content: "You are a helpful assistant",
+		},
+		openai.ChatCompletionMessage{
+			Role:    "user",
+			Content: promptGenerateToken,
+		},
+	}
+	aiStr, err := s.openais["Agent"].CallStreamDirectlyEternalLLMV2(ctx, message, "Qwen/QwQ-32B", s.conf.KnowledgeBaseConfig.DirectServiceUrl, nil)
 	if err != nil {
 		return nil, errs.NewError(err)
 	}
@@ -1387,11 +1493,365 @@ func (s *Service) GetAgentChainFees(ctx context.Context) (map[string]interface{}
 	chainFeeMap := map[string]interface{}{}
 	for _, v := range res {
 		chainFeeMap[strconv.Itoa(int(v.NetworkID))] = map[string]interface{}{
-			"network_id": v.NetworkID,
-			"mint_fee":   numeric.BigFloat2Text(&v.MintFee.Float),
-			"post_fee":   numeric.BigFloat2Text(&v.InferFee.Float),
-			"token_fee":  numeric.BigFloat2Text(&v.TokenFee.Float),
+			"network_id":       v.NetworkID,
+			"mint_fee":         numeric.BigFloat2Text(&v.MintFee.Float),
+			"post_fee":         numeric.BigFloat2Text(&v.InferFee.Float),
+			"token_fee":        numeric.BigFloat2Text(&v.TokenFee.Float),
+			"agent_deploy_fee": numeric.BigFloat2Text(&v.AgentDeployFee.Float),
 		}
 	}
 	return chainFeeMap, nil
+}
+
+func (s *Service) MarkInstalledUtilityAgent(ctx context.Context, address string, req *serializers.AgentActionReq) ([]uint, error) {
+	resp := []uint{}
+	err := daos.WithTransaction(
+		daos.GetDBMainCtx(ctx),
+		func(tx *gorm.DB) error {
+			if len(req.ContractAddress) > 0 {
+				for _, contractAddress := range req.ContractAddress {
+					agentInfo, err := s.dao.FirstAgentInfo(
+						tx,
+						map[string][]any{
+							"agent_contract_address = ?": []any{contractAddress},
+						},
+						map[string][]any{},
+						[]string{"id desc"},
+					)
+					if err != nil {
+						return errs.NewError(err)
+					}
+					if agentInfo == nil {
+						return errs.NewError(errs.ErrAgentNotFound)
+					}
+
+					if req.Action == "uninstall" {
+						err := tx.Where("agent_info_id = ? and address = ?", agentInfo.ID, strings.ToLower(address)).
+							Unscoped().
+							Delete(&models.AgentUtilityInstall{}).Error
+						if err != nil {
+							return errs.NewError(err)
+						}
+					} else {
+						inst := &models.AgentUtilityInstall{
+							Address:     strings.ToLower(address),
+							AgentInfoID: agentInfo.ID,
+						}
+						err = s.dao.Create(tx, inst)
+						if err == nil {
+							err = tx.Model(agentInfo).Update("installed_count", gorm.Expr("installed_count + 1")).Error
+							if err != nil {
+								return errs.NewError(err)
+							}
+						}
+
+					}
+					resp = append(resp, agentInfo.ID)
+				}
+			} else {
+				if req.Action == "uninstall" {
+					for _, agentID := range req.Ids {
+						err := tx.Where("agent_info_id = ? and address = ?", agentID, strings.ToLower(address)).
+							Unscoped().
+							Delete(&models.AgentUtilityInstall{}).Error
+						if err != nil {
+							return errs.NewError(err)
+						}
+						resp = append(resp, agentID)
+					}
+				} else {
+					for _, agentID := range req.Ids {
+						inst := &models.AgentUtilityInstall{
+							Address:     strings.ToLower(address),
+							AgentInfoID: agentID,
+						}
+						err := s.dao.Create(tx, inst)
+						if err == nil {
+							err = tx.Model(&models.AgentInfo{}).Where("id = ?", agentID).Update("installed_count", gorm.Expr("installed_count + 1")).Error
+							if err != nil {
+								return errs.NewError(err)
+							}
+						}
+						resp = append(resp, agentID)
+
+					}
+				}
+			}
+			return nil
+		},
+	)
+
+	if err != nil {
+		return resp, errs.NewError(err)
+	}
+
+	return resp, nil
+}
+
+func (s *Service) MarkRecentChatUtilityAgent(ctx context.Context, address string, req *serializers.AgentActionReq) (bool, error) {
+	err := daos.WithTransaction(
+		daos.GetDBMainCtx(ctx),
+		func(tx *gorm.DB) error {
+			for _, agentID := range req.Ids {
+				now := helpers.TimeNow()
+				inst := &models.AgentUtilityRecentChat{
+					Address:     strings.ToLower(address),
+					AgentInfoID: agentID,
+				}
+				inst.UpdatedAt = *now
+				err := s.dao.Save(tx, inst)
+				if err != nil {
+					_ = tx.Model(&models.AgentUtilityRecentChat{}).Where("address = ? and agent_info_id = ?", strings.ToLower(address), agentID).Update("updated_at", now).Error
+				}
+			}
+			return nil
+		},
+	)
+
+	if err != nil {
+		return false, errs.NewError(err)
+	}
+
+	return true, nil
+}
+
+func (s *Service) MarkPromptCountUtilityAgent(ctx context.Context, address string, agentID uint) (bool, error) {
+	err := daos.WithTransaction(
+		daos.GetDBMainCtx(ctx),
+		func(tx *gorm.DB) error {
+			agentInfo, err := s.dao.FirstAgentInfoByID(
+				tx, agentID,
+				map[string][]any{},
+				true,
+			)
+			if err != nil {
+				return errs.NewError(err)
+			}
+
+			if agentInfo == nil {
+				return errs.NewError(errs.ErrAgentNotFound)
+			}
+
+			if agentInfo.PromptCalls > 0 {
+				err = tx.Model(agentInfo).
+					UpdateColumn("prompt_calls", gorm.Expr("prompt_calls + 1")).Error
+			} else {
+				err = tx.Model(agentInfo).
+					UpdateColumn("prompt_calls", 1).Error
+			}
+			if err != nil {
+				return errs.NewError(errs.ErrBadRequest)
+			}
+			return nil
+		},
+	)
+
+	if err != nil {
+		return false, errs.NewError(err)
+	}
+
+	return true, nil
+}
+
+func (s *Service) LikeAgent(ctx context.Context, address string, agentID uint) (bool, error) {
+	err := daos.WithTransaction(
+		daos.GetDBMainCtx(ctx),
+		func(tx *gorm.DB) error {
+			agentReactionHistory, err := s.dao.FirstAgentReactionHistory(
+				tx,
+				map[string][]any{
+					"agent_info_id = ?": []any{agentID},
+					"user_address = ?":  []any{strings.ToLower(address)},
+				},
+				map[string][]any{},
+				[]string{"id desc"},
+			)
+			if err != nil {
+				return errs.NewError(err)
+			}
+
+			agentInfo, err := s.dao.FirstAgentInfoByID(
+				tx, agentID,
+				map[string][]any{},
+				false,
+			)
+			if err != nil {
+				return errs.NewError(err)
+			}
+
+			if agentInfo == nil {
+				return errs.NewError(errs.ErrAgentNotFound)
+			}
+
+			if agentReactionHistory == nil {
+				agentReactionHistory = &models.AgentReactionHistory{
+					AgentInfoID: agentID,
+					UserAddress: strings.ToLower(address),
+					Reaction:    "like",
+				}
+				err = s.dao.Create(tx, agentReactionHistory)
+				if err != nil {
+					return errs.NewError(err)
+				}
+
+				err = tx.Model(agentInfo).Update("likes", gorm.Expr("likes + 1")).Error
+				if err != nil {
+					return errs.NewError(err)
+				}
+			} else {
+				//unlike
+				err = tx.Unscoped().Delete(agentReactionHistory).Error
+				if err != nil {
+					return errs.NewError(err)
+				}
+
+				err = tx.Model(agentInfo).Update("likes", gorm.Expr("likes - 1")).Error
+				if err != nil {
+					return errs.NewError(err)
+				}
+			}
+			return nil
+		},
+	)
+
+	if err != nil {
+		return false, errs.NewError(err)
+	}
+
+	return true, nil
+}
+
+func (s *Service) CheckAgentLiked(ctx context.Context, address string, agentID uint) (bool, error) {
+	agentReactionHistory, err := s.dao.FirstAgentReactionHistory(
+		daos.GetDBMainCtx(ctx),
+		map[string][]any{
+			"agent_info_id = ?": []any{agentID},
+			"user_address = ?":  []any{strings.ToLower(address)},
+		},
+		map[string][]any{},
+		[]string{"id desc"},
+	)
+	if err != nil {
+		return false, errs.NewError(err)
+	}
+	return agentReactionHistory != nil, nil
+}
+
+func (s *Service) PublicAgent(ctx context.Context, address string, agentID uint) (bool, error) {
+	err := daos.WithTransaction(
+		daos.GetDBMainCtx(ctx),
+		func(tx *gorm.DB) error {
+			agentInfo, err := s.dao.FirstAgentInfoByID(
+				tx, agentID,
+				map[string][]any{},
+				false,
+			)
+			if err != nil {
+				return errs.NewError(err)
+			}
+
+			if agentInfo == nil {
+				return errs.NewError(errs.ErrAgentNotFound)
+			}
+
+			if strings.ToLower(address) != agentInfo.Creator {
+				return errs.NewError(errs.ErrUnAuthorization)
+			}
+
+			err = tx.Model(agentInfo).Update("is_public", !agentInfo.IsPublic).Error
+			if err != nil {
+				return errs.NewError(err)
+			}
+			return nil
+		},
+	)
+
+	if err != nil {
+		return false, errs.NewError(err)
+	}
+
+	return true, nil
+}
+
+func (s *Service) AgentComment(ctx context.Context, address string, agentID uint, req *serializers.AgentCommentReq) (*models.AgentUserComment, error) {
+	var agentUserComment *models.AgentUserComment
+	err := daos.WithTransaction(
+		daos.GetDBMainCtx(ctx),
+		func(tx *gorm.DB) error {
+			agentInfo, err := s.dao.FirstAgentInfoByID(
+				tx, agentID,
+				map[string][]any{},
+				true,
+			)
+			if err != nil {
+				return errs.NewError(err)
+			}
+
+			if agentInfo == nil {
+				return errs.NewError(errs.ErrAgentNotFound)
+			}
+
+			agentUserComment = &models.AgentUserComment{
+				AgentInfoID: agentID,
+				UserAddress: strings.ToLower(address),
+				Comment:     req.Comment,
+				Rating:      req.Rating,
+			}
+
+			err = s.dao.Create(tx, agentUserComment)
+			if err != nil {
+				return errs.NewError(err)
+			}
+
+			switch req.Rating {
+			case 1:
+				err = tx.Model(agentInfo).UpdateColumn("num_of_one_star", gorm.Expr("num_of_one_star + 1")).
+					UpdateColumn("num_of_rating", gorm.Expr("num_of_rating + 1")).Error
+			case 2:
+				err = tx.Model(agentInfo).UpdateColumn("num_of_two_star", gorm.Expr("num_of_two_star + 1")).
+					UpdateColumn("num_of_rating", gorm.Expr("num_of_rating + 1")).Error
+			case 3:
+				err = tx.Model(agentInfo).UpdateColumn("num_of_three_star", gorm.Expr("num_of_three_star + 1")).
+					UpdateColumn("num_of_rating", gorm.Expr("num_of_rating + 1")).Error
+			case 4:
+				err = tx.Model(agentInfo).UpdateColumn("num_of_four_star", gorm.Expr("num_of_four_star + 1")).
+					UpdateColumn("num_of_rating", gorm.Expr("num_of_rating + 1")).Error
+			case 5:
+				err = tx.Model(agentInfo).UpdateColumn("num_of_five_star", gorm.Expr("num_of_five_star + 1")).
+					UpdateColumn("num_of_rating", gorm.Expr("num_of_rating + 1")).Error
+			}
+			if err != nil {
+				return errs.NewError(err)
+			}
+
+			agentInfo.Rating = (agentInfo.Rating*float64(agentInfo.NumOfRating) + req.Rating) / float64(agentInfo.NumOfRating+1)
+			err = tx.Model(agentInfo).Update("rating", agentInfo.Rating).Error
+			if err != nil {
+				return errs.NewError(err)
+			}
+
+			return nil
+		},
+	)
+
+	if err != nil {
+		return nil, errs.NewError(err)
+	}
+
+	return agentUserComment, nil
+}
+
+func (s *Service) GetListAgentComment(ctx context.Context, agentID uint, page, limit int) ([]*models.AgentUserComment, error) {
+	agentUserComments, err := s.dao.AgentUserComment4Page(
+		daos.GetDBMainCtx(ctx),
+		map[string][]any{"agent_info_id = ?": {agentID}},
+		map[string][]any{},
+		[]string{"created_at desc"},
+		page,
+		limit,
+	)
+	if err != nil {
+		return nil, errs.NewError(err)
+	}
+	return agentUserComments, nil
 }

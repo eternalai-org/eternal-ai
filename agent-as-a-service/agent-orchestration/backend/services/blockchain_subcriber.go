@@ -235,3 +235,18 @@ func (s *Service) ApproveMaxEAIForAddress(
 	}
 	return txHash, nil
 }
+
+func (s *Service) DeployProxyAdminAddress(
+	ctx context.Context,
+	networkID uint64,
+) (string, string, error) {
+	memePoolAddress := strings.ToLower(s.conf.GetConfigKeyString(networkID, "meme_pool_address"))
+	contractAddress, txHash, err := s.GetEthereumClient(ctx, networkID).
+		DeployProxyAdmin(
+			s.GetAddressPrk(memePoolAddress),
+		)
+	if err != nil {
+		return "", "", errs.NewError(err)
+	}
+	return contractAddress, txHash, nil
+}

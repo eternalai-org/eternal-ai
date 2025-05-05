@@ -27,6 +27,7 @@ import (
 	blockchainutils "github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/blockchain_utils"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/bridgeapi"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/btcapi"
+	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/clanker"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/coingecko"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/coinmarketcap"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/core"
@@ -34,8 +35,10 @@ import (
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/dexscreener"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/ethapi"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/googlestorage"
+	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/moralis"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/openai"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/opensea"
+	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/privy"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/pumfun"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/rapid"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/taapi"
@@ -75,6 +78,9 @@ type Service struct {
 	dexscreener     *dexscreener.DexScreenerAPI
 	openseaService  *opensea.OpenseaService
 	taapi           *taapi.TaApi
+	clanker         *clanker.Client
+	privyClient     *privy.Client
+	moralisClient   *moralis.Client
 	// daos
 	dao *daos.DAO
 
@@ -101,7 +107,7 @@ func NewService(conf *configs.Config) *Service {
 		gsClient: googlestorage.InitClient(conf.GsStorage.CredentialsFile, conf.GsStorage.BucketName),
 		openais: map[string]*openai.OpenAI{
 			"Agent": openai.NewAgentAI(conf.Ai.ApiKey),
-			"Lama":  openai.NewOpenAI(conf.Ai.ChatUrl, conf.Ai.ApiKey),
+			"Lama":  openai.NewOpenAI(conf.Ai.ChatUrl, conf.Ai.ApiKeyMacStudio, conf.Ai.ModelName),
 		},
 		ethApiMap: map[uint64]*ethapi.Client{},
 		zkApiMap:  map[uint64]*zkapi.Client{},
@@ -147,6 +153,11 @@ func NewService(conf *configs.Config) *Service {
 		dexscreener:    dexscreener.NewDexScreenerAPI(),
 		openseaService: opensea.NewOpensea(conf.OpenseaAPIKey),
 		taapi:          taapi.NewTaApi(conf.TaApiKey),
+		clanker:        clanker.NewClankerClient(conf.Clanker.ApiKey, conf.Clanker.ApiUrl),
+		privyClient:    privy.NewPrivyClient(conf.Privy.AppID, conf.Privy.AppSecret),
+		moralisClient: &moralis.Client{
+			APIKey: conf.MoralisApiKey,
+		},
 	}
 
 	gormDB := mysql.NewDefaultMysqlGormConn(nil, s.conf.DbURL, s.conf.Debug)
@@ -189,6 +200,8 @@ func NewService(conf *configs.Config) *Service {
 	appConfigRepo := repository.NewAppConfigRepository(gormDB)
 	s.AppConfigUseCase = appconfig.NewAppConfigUseCase(appConfigRepo)
 	s.AgentInfoUseCase = agent_info.NewAgentInfoUseCase(agentInfoRepo)
+	InitTeleVideoActivitiesAlert(s.conf.VideoTelegramKey, s.conf.VideoActivitiesTelegramAlert)
+	InitTeleMagicVideoActivitiesAlert(s.conf.VideoTelegramKey, s.conf.MagicVideoActivitiesTelegramAlert)
 	return s
 }
 
@@ -211,7 +224,9 @@ func (s *Service) GetAddressPrk(address string) string {
 	}
 	return prkHex
 }
-
+func (s *Service) GetTwitterWrapAPI() *twitter.Client {
+	return s.twitterWrapAPI
+}
 func (s *Service) JobRunCheck(ctx context.Context, jobId string, jobFunc func() error) error {
 	s.jobMutex.Lock()
 	isRun := s.jobRunMap[jobId]

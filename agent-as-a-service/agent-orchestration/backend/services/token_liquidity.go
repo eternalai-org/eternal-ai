@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/models"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/serializers"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/types/numeric"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/jinzhu/gorm"
 )
 
@@ -68,13 +70,15 @@ func (s *Service) CreateMeme(ctx context.Context, address string, networkID uint
 		ReqSyncAt:         helpers.TimeNow(),
 		SyncAt:            helpers.TimeNow(),
 		TokenId:           helpers.RandomBigInt(32).String(),
+		NotGraduated:      req.NotGraduated,
 	}
 	switch meme.NetworkID {
 	case models.BASE_CHAIN_ID,
 		models.ARBITRUM_CHAIN_ID,
 		models.BSC_CHAIN_ID,
 		models.AVALANCHE_C_CHAIN_ID,
-		models.APE_CHAIN_ID:
+		models.APE_CHAIN_ID,
+		models.CELO_CHAIN_ID:
 		{
 			agentChainFee, err := s.GetAgentChainFee(
 				daos.GetDBMainCtx(ctx),
@@ -93,7 +97,7 @@ func (s *Service) CreateMeme(ctx context.Context, address string, networkID uint
 	agent, err := s.dao.FirstAgentInfoByID(
 		daos.GetDBMainCtx(ctx),
 		meme.AgentInfoID,
-		map[string][]interface{}{},
+		map[string][]any{},
 		false,
 	)
 	if err != nil {
@@ -131,11 +135,11 @@ func (s *Service) GetListMemeReport(ctx context.Context, chainID uint64,
 	if len(sortListStr) > 0 {
 		sortDefault = strings.Join(sortListStr, ", ")
 	}
-	joinFilters := map[string][]interface{}{}
-	filters := map[string][]interface{}{}
+	joinFilters := map[string][]any{}
+	filters := map[string][]any{}
 
 	if chainID > 0 {
-		filters[`network_id = ?`] = []interface{}{chainID}
+		filters[`network_id = ?`] = []any{chainID}
 	}
 
 	selected := []string{
@@ -152,7 +156,7 @@ func (s *Service) GetListMemeReport(ctx context.Context, chainID uint64,
 				join meme_followers f on f.user_id = u.id
 				join users d on f.follow_user_id = d.id
 				where u.address = ?
-			)`] = []interface{}{strings.ToLower(address)}
+			)`] = []any{strings.ToLower(address)}
 		} else {
 			joinFilters[`
 				left join (
@@ -166,8 +170,8 @@ func (s *Service) GetListMemeReport(ctx context.Context, chainID uint64,
 					AND cast(balance as decimal(36, 18)) > 0.00000001
 					AND erc20_holders.address = ?
 			) h on memes.id = h.meme_id
-			`] = []interface{}{strings.ToLower(address)}
-			filters[`memes.owner_address = ? or ifnull(h.total_balance, 0) > 0`] = []interface{}{strings.ToLower(address)}
+			`] = []any{strings.ToLower(address)}
+			filters[`memes.owner_address = ? or ifnull(h.total_balance, 0) > 0`] = []any{strings.ToLower(address)}
 			selected = append(selected, `ifnull(h.total_balance, 0) total_balance`)
 		}
 	}
@@ -178,20 +182,20 @@ func (s *Service) GetListMemeReport(ctx context.Context, chainID uint64,
 			LOWER(memes.ticker) like ?
 			or LOWER(memes.name) like ?
 			or LOWER(memes.token_address) like ?
-		`] = []interface{}{search, search, search}
+		`] = []any{search, search, search}
 	}
 
 	if status != "" {
 		listStatus := strings.Split(status, ",")
 		if len(listStatus) > 0 {
-			filters["memes.status in (?)"] = []interface{}{listStatus}
+			filters["memes.status in (?)"] = []any{listStatus}
 		}
 	}
 	keys, count, err := s.dao.FindMemeJoinSelect4Page(daos.GetDBMainCtx(ctx),
 		selected,
 		joinFilters,
 		filters,
-		map[string][]interface{}{
+		map[string][]any{
 			"Owner":                    {},
 			"AgentInfo":                {},
 			"AgentInfo.TwitterInfo":    {},
@@ -227,8 +231,8 @@ func (s *Service) GetListMemeReport(ctx context.Context, chainID uint64,
 
 // //////Feed API
 func (s *Service) GetFeedMemeReport(ctx context.Context, address, search, sortType string, page, limit int) ([]*models.Meme, uint, error) {
-	joinFilters := map[string][]interface{}{}
-	filters := map[string][]interface{}{}
+	joinFilters := map[string][]any{}
+	filters := map[string][]any{}
 	sortNum, _ := strconv.Atoi(sortType)
 	sortDefault := `seen_time asc, weight desc, percent desc`
 	if sortNum > 0 {
@@ -242,7 +246,7 @@ func (s *Service) GetFeedMemeReport(ctx context.Context, address, search, sortTy
 	}
 
 	if address != "" {
-		joinFilters[`left join meme_seens on meme_seens.meme_id = memes.id and meme_seens.user_address = ?`] = []interface{}{strings.ToLower(address)}
+		joinFilters[`left join meme_seens on meme_seens.meme_id = memes.id and meme_seens.user_address = ?`] = []any{strings.ToLower(address)}
 		selected = append(selected, `ifnull(DATE_FORMAT(meme_seens.seen_time, '%Y-%m-%d'), '2000-01-01') seen_time`)
 	} else {
 		selected = append(selected, `'2000-01-01' seen_time`)
@@ -255,15 +259,15 @@ func (s *Service) GetFeedMemeReport(ctx context.Context, address, search, sortTy
 			or LOWER(memes.name) like ?
 			or LOWER(memes.token_address) like ?
 			or LOWER(memes.description) like ?
-		`] = []interface{}{search, search, search, search}
+		`] = []any{search, search, search, search}
 	}
 
 	keys, count, err := s.dao.FindMemeJoinSelect4Page(daos.GetDBMainCtx(ctx),
 		selected,
 		joinFilters,
 		filters,
-		map[string][]interface{}{
-			"Owner": []interface{}{},
+		map[string][]any{
+			"Owner": []any{},
 		},
 		[]string{sortDefault}, page, limit,
 	)
@@ -292,13 +296,13 @@ func (s *Service) CheckedSeenMeme(ctx context.Context, address, memAddress strin
 	err := daos.WithTransaction(
 		daos.GetDBMainCtx(ctx),
 		func(tx *gorm.DB) error {
-			filters := map[string][]interface{}{
+			filters := map[string][]any{
 				"memes.token_address = ?": {strings.ToLower(memAddress)},
 			}
 
 			meme, err := s.dao.FirstMeme(tx,
 				filters,
-				map[string][]interface{}{},
+				map[string][]any{},
 				false,
 			)
 
@@ -313,11 +317,11 @@ func (s *Service) CheckedSeenMeme(ctx context.Context, address, memAddress strin
 
 			if meme != nil && user != nil {
 				memeSeen, err := s.dao.FirstMemeSeen(tx,
-					map[string][]interface{}{
+					map[string][]any{
 						"user_id = ?": {user.ID},
 						"meme_id = ?": {meme.ID},
 					},
-					map[string][]interface{}{}, false)
+					map[string][]any{}, false)
 
 				if err != nil {
 					return errs.NewError(err)
@@ -335,7 +339,7 @@ func (s *Service) CheckedSeenMeme(ctx context.Context, address, memAddress strin
 						return errs.NewError(err)
 					}
 				} else {
-					memeSeen, _ = s.dao.FirstMemeSeenByID(tx, memeSeen.ID, map[string][]interface{}{}, true)
+					memeSeen, _ = s.dao.FirstMemeSeenByID(tx, memeSeen.ID, map[string][]any{}, true)
 					memeSeen.SeenTime = helpers.TimeNow()
 					err = s.dao.Save(tx, memeSeen)
 					if err != nil {
@@ -355,10 +359,10 @@ func (s *Service) CheckedSeenMeme(ctx context.Context, address, memAddress strin
 }
 
 func (s *Service) CacheMemeDetail(tx *gorm.DB, memAddress string) error {
-	filters := map[string][]interface{}{
+	filters := map[string][]any{
 		"memes.token_address = ?": {strings.ToLower(memAddress)},
 	}
-	joinFilters := map[string][]interface{}{}
+	joinFilters := map[string][]any{}
 	joinFilters[`
 		left join (
 			SELECT
@@ -372,7 +376,7 @@ func (s *Service) CacheMemeDetail(tx *gorm.DB, memAddress string) error {
 				AND erc20_holders.contract_address = ?
 			group by memes.id
 		) h on memes.id = h.meme_id
-	`] = []interface{}{strings.ToLower(memAddress)}
+	`] = []any{strings.ToLower(memAddress)}
 	selected := []string{
 		`ifnull((cast(( memes.price - memes.price_last24h) / memes.price_last24h * 100 as decimal(20, 2))), 0) percent`,
 		"memes.*",
@@ -383,7 +387,7 @@ func (s *Service) CacheMemeDetail(tx *gorm.DB, memAddress string) error {
 		selected,
 		joinFilters,
 		filters,
-		map[string][]interface{}{
+		map[string][]any{
 			"Owner":                    {},
 			"AgentInfo":                {},
 			"AgentInfo.TwitterInfo":    {},
@@ -410,20 +414,20 @@ func (s *Service) CacheMemeDetail(tx *gorm.DB, memAddress string) error {
 }
 
 func (s *Service) GetMemeTradeHistory(ctx context.Context, userAddress, tokenAddress string, page, limit int) ([]*models.MemeTradeHistory, uint, error) {
-	filters := map[string][]interface{}{}
-	preloads := map[string][]interface{}{}
-	joinFilters := map[string][]interface{}{
+	filters := map[string][]any{}
+	preloads := map[string][]any{}
+	joinFilters := map[string][]any{
 		`join memes on meme_trade_histories.meme_id = memes.id`: {},
 	}
 
 	if userAddress != "" {
-		filters["meme_trade_histories.user_address = ?"] = []interface{}{strings.ToLower(userAddress)}
-		preloads[`Meme`] = []interface{}{}
+		filters["meme_trade_histories.user_address = ?"] = []any{strings.ToLower(userAddress)}
+		preloads[`Meme`] = []any{}
 	}
 
 	if tokenAddress != "" {
-		filters["meme_trade_histories.meme_token_address = ? or memes.agent_info_id = ?"] = []interface{}{strings.ToLower(tokenAddress), tokenAddress}
-		preloads[`RecipientUser`] = []interface{}{}
+		filters["meme_trade_histories.meme_token_address = ? or memes.agent_info_id = ?"] = []any{strings.ToLower(tokenAddress), tokenAddress}
+		preloads[`RecipientUser`] = []any{}
 	}
 
 	selected := []string{
@@ -458,15 +462,15 @@ func (s *Service) GetMemeTradeHistoryLatest(ctx context.Context, tokenAddress st
 }
 
 func (s *Service) CacheMemeTradeHistoryLatest(tx *gorm.DB, tokenAddress string) error {
-	filters := map[string][]interface{}{}
-	preloads := map[string][]interface{}{}
+	filters := map[string][]any{}
+	preloads := map[string][]any{}
 
 	if tokenAddress != "" {
-		filters["meme_token_address = ?"] = []interface{}{strings.ToLower(tokenAddress)}
-		preloads[`RecipientUser`] = []interface{}{}
+		filters["meme_token_address = ?"] = []any{strings.ToLower(tokenAddress)}
+		preloads[`RecipientUser`] = []any{}
 	}
 
-	joinFilters := map[string][]interface{}{}
+	joinFilters := map[string][]any{}
 
 	selected := []string{
 		"meme_trade_histories.*",
@@ -514,17 +518,17 @@ func (s *Service) GetTokenHolders(ctx context.Context, tokenAddress string) (str
 }
 
 func (s *Service) CacheMemeHolders(tx *gorm.DB, tokenAddress string) error {
-	filters := map[string][]interface{}{
+	filters := map[string][]any{
 		`cast(erc20_holders.balance as decimal(36, 18)) > 0.0000000001`: {},
 	}
 
-	joinFilters := map[string][]interface{}{
+	joinFilters := map[string][]any{
 		`join agent_infos on agent_infos.token_address = erc20_holders.contract_address and agent_infos.token_address is not null and agent_infos.token_address != ""`: {},
 	}
 
 	if tokenAddress != "" {
-		filters["erc20_holders.contract_address = ? or agent_infos.id=?"] = []interface{}{strings.ToLower(tokenAddress), tokenAddress}
-		filters["erc20_holders.address != ?"] = []interface{}{strings.ToLower("0x92a57bb5d9d61214cf4b7a85d3f74fef10e1ff37")}
+		filters["erc20_holders.contract_address = ? or agent_infos.id=?"] = []any{strings.ToLower(tokenAddress), tokenAddress}
+		filters["erc20_holders.address != ?"] = []any{strings.ToLower("0x92a57bb5d9d61214cf4b7a85d3f74fef10e1ff37")}
 	}
 
 	selected := []string{
@@ -536,7 +540,7 @@ func (s *Service) CacheMemeHolders(tx *gorm.DB, tokenAddress string) error {
 		selected,
 		joinFilters,
 		filters,
-		map[string][]interface{}{},
+		map[string][]any{},
 		[]string{"total_balance desc"}, 1, 1000,
 	)
 
@@ -562,15 +566,15 @@ func (s *Service) CacheMemeHolders(tx *gorm.DB, tokenAddress string) error {
 }
 
 func (s *Service) GetTokenHolding(ctx context.Context, userAddress string, page, limit int) ([]*models.Erc20Holder, uint, error) {
-	filters := map[string][]interface{}{
+	filters := map[string][]any{
 		`cast(balance as decimal(36, 18)) > 0.00000001`: {},
 	}
 
 	if userAddress != "" {
-		filters["erc20_holders.address = ?"] = []interface{}{strings.ToLower(userAddress)}
+		filters["erc20_holders.address = ?"] = []any{strings.ToLower(userAddress)}
 	}
 
-	joinFilters := map[string][]interface{}{
+	joinFilters := map[string][]any{
 		`
 			join memes on erc20_holders.contract_address = memes.token_address
 		`: {},
@@ -590,7 +594,7 @@ func (s *Service) GetTokenHolding(ctx context.Context, userAddress string, page,
 		selected,
 		joinFilters,
 		filters,
-		map[string][]interface{}{},
+		map[string][]any{},
 		[]string{"total_balance desc"}, page, limit,
 	)
 
@@ -612,12 +616,12 @@ func (s *Service) GetMemeUserProfile(ctx context.Context, networkID uint64, addr
 		return nil, errs.NewError(errs.ErrUserNotFound)
 	}
 
-	filters := map[string][]interface{}{
+	filters := map[string][]any{
 		"address = ?":    {user.Address},
 		"network_id = ?": {networkID},
 	}
 
-	joinFilters := map[string][]interface{}{
+	joinFilters := map[string][]any{
 		`
 		left join (
 			select ifnull(count(*), 0) total_noti, ifnull(sum(case when seen = 1 then 1 end), 0) total_seen
@@ -644,7 +648,7 @@ func (s *Service) GetMemeUserProfile(ctx context.Context, networkID uint64, addr
 		selected,
 		joinFilters,
 		filters,
-		map[string][]interface{}{},
+		map[string][]any{},
 		false,
 	)
 
@@ -656,8 +660,8 @@ func (s *Service) GetMemeUserProfile(ctx context.Context, networkID uint64, addr
 }
 
 func (s *Service) GetListFollowers(ctx context.Context, userAddress string, page, limit int) ([]*models.MemeFollowers, uint, error) {
-	filters := map[string][]interface{}{}
-	joinFilters := map[string][]interface{}{
+	filters := map[string][]any{}
+	joinFilters := map[string][]any{
 		`join users on users.id=meme_followers.follow_user_id and users.address = ?`: {strings.ToLower(userAddress)},
 	}
 
@@ -669,8 +673,8 @@ func (s *Service) GetListFollowers(ctx context.Context, userAddress string, page
 		selected,
 		joinFilters,
 		filters,
-		map[string][]interface{}{
-			"User": []interface{}{},
+		map[string][]any{
+			"User": []any{},
 		},
 		[]string{"created_at desc"}, page, limit,
 	)
@@ -689,10 +693,10 @@ func (s *Service) GetMemeChartCandleData(ctx context.Context, tokenAddress strin
 	}
 
 	meme, err := s.dao.FirstMeme(daos.GetDBMainCtx(ctx),
-		map[string][]interface{}{
+		map[string][]any{
 			"token_address = ?": {strings.ToLower(tokenAddress)},
 		},
-		map[string][]interface{}{},
+		map[string][]any{},
 		false,
 	)
 	if err != nil {
@@ -830,15 +834,15 @@ func (s *Service) CacheMemeCandleDataChart(tx *gorm.DB, memeID uint) error {
 }
 
 func (s *Service) MemeSnapshotTokenHolder(ctx context.Context, tokenAddress string) error {
-	filters := map[string][]interface{}{
+	filters := map[string][]any{
 		`cast(balance as decimal(36, 18)) > 0`: {},
 	}
 
 	if tokenAddress != "" {
-		filters["erc20_holders.contract_address = ?"] = []interface{}{strings.ToLower(tokenAddress)}
+		filters["erc20_holders.contract_address = ?"] = []any{strings.ToLower(tokenAddress)}
 	}
 
-	joinFilters := map[string][]interface{}{}
+	joinFilters := map[string][]any{}
 
 	selected := []string{
 		"erc20_holders.*",
@@ -848,7 +852,7 @@ func (s *Service) MemeSnapshotTokenHolder(ctx context.Context, tokenAddress stri
 		selected,
 		joinFilters,
 		filters,
-		map[string][]interface{}{},
+		map[string][]any{},
 		[]string{}, 1, 10000,
 	)
 
@@ -873,8 +877,8 @@ func (s *Service) MemeSnapshotTokenHolder(ctx context.Context, tokenAddress stri
 
 func (s *Service) GetMemeWhiteListAddress(ctx context.Context) ([]string, error) {
 	keys, err := s.dao.FindMemeWhiteListAddress(daos.GetDBMainCtx(ctx),
-		map[string][]interface{}{},
-		map[string][]interface{}{},
+		map[string][]any{},
+		map[string][]any{},
 		[]string{},
 		0, 1000,
 	)
@@ -893,15 +897,15 @@ func (s *Service) GetMemeWhiteListAddress(ctx context.Context) ([]string, error)
 
 func (s *Service) GetMemeBurnHistory(ctx context.Context, networkID uint64, userAddress, tokenAddress string, page, limit int) ([]*models.TokenTransfer, uint, error) {
 	burnAddress := s.conf.GetConfigKeyString(networkID, "meme_burn_address")
-	filters := map[string][]interface{}{
+	filters := map[string][]any{
 		"token_transfers.to = ?": {strings.ToLower(burnAddress)},
 	}
 
 	if userAddress != "" {
-		filters["token_transfers.from = ?"] = []interface{}{strings.ToLower(userAddress)}
+		filters["token_transfers.from = ?"] = []any{strings.ToLower(userAddress)}
 	}
 
-	joinFilters := map[string][]interface{}{
+	joinFilters := map[string][]any{
 		`
 			join users on users.address = token_transfers.from
 			join memes on memes.token_address = token_transfers.contract_address
@@ -929,7 +933,7 @@ func (s *Service) GetMemeBurnHistory(ctx context.Context, networkID uint64, user
 		selected,
 		joinFilters,
 		filters,
-		map[string][]interface{}{},
+		map[string][]any{},
 		[]string{"transaction_at desc"}, page, limit,
 	)
 
@@ -944,13 +948,13 @@ func (s *Service) ShareMeme(ctx context.Context, address, memAddress string) (bo
 	err := daos.WithTransaction(
 		daos.GetDBMainCtx(ctx),
 		func(tx *gorm.DB) error {
-			filters := map[string][]interface{}{
+			filters := map[string][]any{
 				"memes.token_address = ?": {strings.ToLower(memAddress)},
 			}
 
 			meme, err := s.dao.FirstMeme(tx,
 				filters,
-				map[string][]interface{}{},
+				map[string][]any{},
 				false,
 			)
 
@@ -962,8 +966,8 @@ func (s *Service) ShareMeme(ctx context.Context, address, memAddress string) (bo
 				err = daos.GetDBMainCtx(ctx).
 					Model(meme).
 					Updates(
-						map[string]interface{}{
-							"shared": meme.Shared + 1,
+						map[string]any{
+							"shared": gorm.Expr("shared + 1"),
 						},
 					).Error
 				if err != nil {
@@ -979,4 +983,111 @@ func (s *Service) ShareMeme(ctx context.Context, address, memAddress string) (bo
 	}
 	return true, nil
 
+}
+
+func (s *Service) VibeTokenGetDeployInfo(ctx context.Context, address string, agentID uint) (*serializers.VibeTokenDeployInfoResp, error) {
+	agentInfo, err := s.dao.FirstAgentInfoByID(daos.GetDBMainCtx(ctx), agentID, map[string][]any{}, false)
+	if err != nil {
+		return nil, errs.NewError(err)
+	}
+	if !strings.EqualFold(address, agentInfo.Creator) {
+		return nil, errs.NewError(errs.ErrBadRequest)
+	}
+	if !agentInfo.IsVibeAgent() {
+		return nil, errs.NewError(errs.ErrBadRequest)
+	}
+	if agentInfo.TokenNetworkID == 0 {
+		return nil, errs.NewError(errs.ErrBadRequest)
+	}
+	if agentInfo.TokenSymbol == "" {
+		return nil, errs.NewError(errs.ErrBadRequest)
+	}
+	if agentInfo.TokenName == "" {
+		return nil, errs.NewError(errs.ErrBadRequest)
+	}
+	vibeToken, err := s.dao.FirstMeme(
+		daos.GetDBMainCtx(ctx),
+		map[string][]any{
+			"agent_info_id = ?": {agentID},
+		},
+		map[string][]any{},
+		false,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if vibeToken == nil {
+		_, err = s.CreateMeme(
+			ctx, agentInfo.Creator,
+			agentInfo.TokenNetworkID,
+			&serializers.MemeReq{
+				Name:            agentInfo.TokenName,
+				Ticker:          agentInfo.TokenSymbol,
+				Description:     agentInfo.TokenDesc,
+				Image:           agentInfo.TokenImageUrl,
+				Twitter:         fmt.Sprintf("https://x.com/%s", agentInfo.TwitterUsername),
+				AgentInfoID:     agentInfo.ID,
+				BaseTokenSymbol: string(models.BaseTokenSymbolEAI),
+			})
+		if err != nil {
+			return nil, errs.NewError(err)
+		}
+	}
+	vibeToken, err = s.dao.FirstMeme(
+		daos.GetDBMainCtx(ctx),
+		map[string][]any{
+			"agent_info_id = ?": {agentID},
+		},
+		map[string][]any{},
+		false,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if vibeToken == nil {
+		return nil, errs.NewError(errs.ErrBadRequest)
+	}
+	if vibeToken.TokenAddress != "" {
+		return nil, errs.NewError(errs.ErrBadRequest)
+	}
+	baseTokenPrice := s.GetTokenMarketPrice(daos.GetDBMainCtx(ctx), vibeToken.BaseTokenSymbol)
+	lowerPrice, _ := models.QuoBigFloats(
+		big.NewFloat(models.LOWER_PRICE_USD),
+		big.NewFloat(models.TOKEN_SUPPLY),
+		baseTokenPrice,
+	).Float64()
+	upperPrice, _ := models.QuoBigFloats(
+		big.NewFloat(models.UPPER_PRICE_USD),
+		big.NewFloat(models.TOKEN_SUPPLY),
+		baseTokenPrice,
+	).Float64()
+	lowerTick := models.PriceToTick(lowerPrice, 1200)
+	upperTick := models.PriceToTick(upperPrice, 1200)
+	// calculate lower and upper tick base on EAI price
+	deadline := time.Now().Add(time.Minute * 10).Unix()
+	signature, err := s.GetEthereumClient(ctx, vibeToken.NetworkID).GetSignatureForDeployToken(
+		s.GetAddressPrk(s.conf.GetConfigKeyString(uint64(vibeToken.NetworkID), "vibe_token_factory_admin")),
+		helpers.HexToAddress(s.conf.GetConfigKeyString(uint64(vibeToken.NetworkID), "vibe_token_factory_address")),
+		vibeToken.NetworkID,
+		helpers.HexToBytes32(agentInfo.AgentID),
+		vibeToken.Name,
+		vibeToken.Ticker,
+		helpers.HexToAddress(agentInfo.Creator),
+		big.NewInt(int64(lowerTick)),
+		big.NewInt(int64(upperTick)),
+		big.NewInt(deadline),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &serializers.VibeTokenDeployInfoResp{
+		NonceHex:  common.HexToHash(agentInfo.AgentID).Hex(),
+		Name:      vibeToken.Name,
+		Symbol:    vibeToken.Ticker,
+		Creator:   agentInfo.Creator,
+		LowerTick: lowerTick,
+		UpperTick: upperTick,
+		Deadline:  deadline,
+		Signature: signature,
+	}, nil
 }

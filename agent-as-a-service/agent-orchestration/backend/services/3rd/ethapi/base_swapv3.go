@@ -171,7 +171,7 @@ import (
 // 	if err != nil {
 // 		return "", err
 // 	}
-// 	nonceAt, err := client.PendingNonceAt(context.Background(), addressHex)
+// 	nonceAt, err := c.PendingNonceAt(context.Background(), addressHex)
 // 	if err != nil {
 // 		return "", err
 // 	}
@@ -340,7 +340,7 @@ func (c *Client) BaseNonfungiblePositionManagerMint(contractAddr string, private
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), addressHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), addressHex)
 	if err != nil {
 		return "", err
 	}
@@ -597,7 +597,7 @@ func (c *Client) BaseSwapRouterExactInputSingle(contractAddr, privateHex string,
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), addressHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), addressHex)
 	if err != nil {
 		return "", err
 	}

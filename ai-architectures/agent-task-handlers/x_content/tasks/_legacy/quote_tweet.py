@@ -48,9 +48,7 @@ class QuoteTweetTask(MultiStepTaskBase):
                     f"Error retrieving quote tweets: {resp.error}",
                 )
 
-            tweets = [
-                x.to_dict() for x in resp.data.tweet_infos
-            ]
+            tweets = [x.to_dict() for x in resp.data.tweet_infos]
 
             log.execute_info = {
                 "tweets": tweets,
@@ -76,6 +74,7 @@ class QuoteTweetTask(MultiStepTaskBase):
                 info_resp = await twitter_v2.get_relevent_information_v2(
                     self.kn_base,
                     tweets=full_context,
+                    task_name=log.task,
                 )
 
                 knowledge_v2 = (
@@ -114,7 +113,9 @@ class QuoteTweetTask(MultiStepTaskBase):
             ]
 
             # TODO: rewrite this
-            for i, infer in enumerate(await asyncio.gather(*futures, return_exceptions=True)):
+            for i, infer in enumerate(
+                await asyncio.gather(*futures, return_exceptions=True)
+            ):
                 if isinstance(infer, Exception):
                     logger.info(
                         f"[{log.id}] Error while processing index {i} (out of {totals}): {infer} (inference fails)."

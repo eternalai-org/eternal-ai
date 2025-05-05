@@ -51,16 +51,28 @@ func (s *Server) Routers() {
 		rootAPI.GET("/health", func(c *gin.Context) {
 			ctxJSON(c, http.StatusOK, &serializers.Resp{Error: nil})
 		})
+
 		rootAPI.GET("/configs/explorer", s.GetAllConfigsExplorer)
 		rootAPI.GET("/clear-cache", s.ClearCacheKey)
 		rootAPI.GET("/eai/supply/total", s.GetEAISupplyTotal)
 		rootAPI.GET("/eai/supply/circulating", s.GetEAISupplyCirculating)
 		rootAPI.GET("/coin-prices", s.GetTokenPrice)
 
+		rootAPI.POST("/vibe-white-list", s.AddVibeWhiteList)
+		rootAPI.GET("/scan-transaction", s.MemeEventsByTransaction)
+
 		webhookAPI := rootAPI.Group("/webhook")
 		{
 			webhookAPI.GET("/twitter-oauth", s.TwitterOauthCallback)
 			webhookAPI.GET("/twitter-oauth/internal", s.TwitterOauthCallbackForInternalData)
+		}
+
+		pumpAPI := rootAPI.Group("/pump")
+		{
+			pumpAPI.GET("/orders", s.GetPumpOrderHistory)
+			pumpAPI.GET("/balances", s.GetPumpBalance)
+			rootAPI.GET("/notify-change-price-pump", s.NotifyChangePricePump)
+			rootAPI.GET("/trending-tokens", s.GetListTrendingTokens)
 		}
 
 		// user
@@ -85,6 +97,7 @@ func (s *Server) Routers() {
 		// Agent management
 		agentAPI := rootAPI.Group("/agent")
 		{
+			agentAPI.GET("/categories", s.GetListAgentCategory)
 			agentAPI.GET("/report", s.GetAgentSummaryReport)
 			agentAPI.GET("/list", s.GetListAgent)
 			agentAPI.GET("/unclaimed", s.GetListAgentUnClaimed)
@@ -92,6 +105,7 @@ func (s *Server) Routers() {
 			agentAPI.GET("/admin/:id", s.GetAgentDetailByAgentID)
 			agentAPI.GET("/by-contract/:address/:id", s.GetAgentDetailByContract)
 			agentAPI.GET("/detail/:id", s.GetAgentDetail)
+			agentAPI.POST("/update-code-version/:id", s.UpdateAgentCodeVersion)
 
 			agentAPI.GET("/post", s.GetListAgentTwitterPost)
 			agentAPI.GET("/post/:id", s.GetAgentTwitterPostDetail)
@@ -109,6 +123,7 @@ func (s *Server) Routers() {
 			agentAPI.POST("/chats", s.AgentChatSupport)
 
 			agentAPI.GET("/network-fees", s.GetAgentChainFees)
+			agentAPI.GET("/liquidity-networks", s.GetEaiLiquidityNetowrks)
 
 			twitterAPI := agentAPI.Group("/twitter")
 			{
@@ -138,6 +153,7 @@ func (s *Server) Routers() {
 
 			agentAPI.GET("/dashboard", s.GetDashBoardAgent)
 			agentAPI.GET("/dashboard/:token_address", s.GetDashBoardAgentDetail)
+
 			agentAPI.GET("/token-info/:id", s.GetTokenInfoByContract)
 
 			// dojo
@@ -146,6 +162,16 @@ func (s *Server) Routers() {
 			agentAPI.GET("/dojo/:id/knowledge-base", s.listKnowledgeByAgent)
 			agentAPI.POST("/create_agent_assistant", s.authCheckTK1TokenMiddleware(), s.AgentCreateAgentAssistant)
 			agentAPI.POST("/update_agent_assistant", s.authCheckTK1TokenMiddleware(), s.AgentUpdateAgentAssistant)
+			agentAPI.POST("/install", s.authCheckTK1TokenMiddleware(), s.MarkInstalledUtilityAgent)
+			agentAPI.POST("/recent-chat", s.authCheckTK1TokenMiddleware(), s.MarkRecentChatUtilityAgent)
+			agentAPI.POST("/prompt/:id", s.authCheckTK1TokenMiddleware(), s.MarkPromptCountUtilityAgent)
+
+			agentAPI.POST("/comment/:id", s.authCheckTK1TokenMiddleware(), s.AgentComment)
+			agentAPI.GET("/comment/:id", s.GetListAgentComment)
+
+			agentAPI.POST("/public/:id", s.authCheckTK1TokenMiddleware(), s.PublicAgent)
+			agentAPI.POST("/like/:id", s.authCheckTK1TokenMiddleware(), s.LikeAgent)
+			agentAPI.GET("/like/:id", s.authCheckTK1TokenMiddleware(), s.CheckAgentLiked)
 
 			agentAPI.POST("/create-local-agent", s.AgentCreateAgentAssistantForLocal)
 			agentAPI.GET("/list-local-agent", s.GetListAgentForDojo)
@@ -166,6 +192,13 @@ func (s *Server) Routers() {
 			agentAPI.GET("/:id/install-code", s.authCheckTK1TokenMiddleware(), s.GetAgentStoreInstallCode)
 			agentAPI.GET("/install/info", s.GetAgentInfoInstallInfo)
 			//
+			agentAPI.GET("/library", s.GetAgentLibrary)
+			agentAPI.POST("/add-library", s.AddAgentLibrary)
+			agentAPI.GET("/check-exist", s.CheckNameExist)
+
+			agentAPI.GET("/video", s.GetListUserVideo)
+			agentAPI.GET("/video/user", s.GetVideoUserInfo)
+			agentAPI.POST("/video/export", s.authCheckTK1TokenMiddleware(), s.ExportUserPrivateKeyForClaimVideoReward)
 
 		}
 
@@ -184,6 +217,8 @@ func (s *Server) Routers() {
 		internalAPI := rootAPI.Group("/internal", s.internalApiMiddleware())
 		{
 			internalAPI.GET("/webtext", s.GetWebpageText)
+			internalAPI.POST("/trigger_job", s.AdminTriggerJob)
+			internalAPI.GET("/handle_video", s.AdminHandleVideo)
 
 			twitterAPI := internalAPI.Group("/twitter")
 			{
@@ -258,6 +293,16 @@ func (s *Server) Routers() {
 			{
 				launchpadAPI.POST("/:id/tier/:member_id", s.ExecuteLaunchpadTier)
 			}
+
+			robotAPI := internalAPI.Group("/robot")
+			{
+				robotAPI.POST("/wallet", s.GenerateRobotSaleWallet)
+				robotAPI.GET("/wallet", s.GetRobotSaleWallet)
+				robotAPI.GET("/project", s.GetRobotProject)
+				robotAPI.POST("/token", s.RobotCreateToken)
+				robotAPI.POST("/transfer", s.RobotTransferToken)
+				robotAPI.GET("/leaderboards", s.GetRobotProjectLeaderBoards)
+			}
 		}
 		// deprecated
 		externalWalletAPI := rootAPI.Group("/external-wallet")
@@ -280,40 +325,6 @@ func (s *Server) Routers() {
 			subcriptionAPI.GET("/packages", s.GetApiPackages)
 			subcriptionAPI.GET("/info", s.GetApiSubscriptionInfo)
 		}
-
-		// agentStoreAPI := rootAPI.Group("/agent-store")
-		// {
-		// 	agentStoreAPI.POST("/save", s.authCheckTK1TokenMiddleware(), s.SaveAgentStore)
-		// 	agentStoreAPI.POST("/mint/:agent_store_id", s.authCheckTK1TokenMiddleware(), s.ScanAgentInfraMintHash)
-		// 	agentStoreAPI.GET("/list", s.GetListAgentStore)
-		// 	agentStoreAPI.GET("/list-by-owner", s.authCheckTK1TokenMiddleware(), s.GetListAgentStoreByOwner)
-		// 	agentStoreAPI.GET("/install/list", s.GetListAgentStoreInstall)
-		// 	agentStoreAPI.GET("/:id", s.GetAgentStoreDetail)
-		// 	agentStoreAPI.POST("/:id/mission", s.authCheckTK1TokenMiddleware(), s.SaveMissionStore)
-		// 	agentStoreAPI.GET("/:id/install-code/:agent_info_id", s.authCheckTK1TokenMiddleware(), s.GetAgentStoreInstallCode)
-		// 	agentStoreAPI.POST("/install/callback", s.AuthenAgentStoreCallback)
-
-		// 	agentStoreAPI.POST("/run-mission", s.authCheckTK1TokenMiddleware(), s.RunMission)
-		// 	agentStoreAPI.GET("/mission-result", s.authCheckTK1TokenMiddleware(), s.MissionStoreResult)
-
-		// 	agentStoreAPI.GET("/install/info", s.GetInstallInfo)
-
-		// 	agentStoreAPI.GET("/token-info/:id", s.authCheckTK1TokenMiddleware(), s.AgentStoreGetTokenInfo)
-		// 	agentStoreAPI.GET("/create-token/:id", s.authCheckTK1TokenMiddleware(), s.AgentStoreCreateToken)
-
-		// 	agentStoreAPI.GET("/try-history/", s.authCheckTK1TokenMiddleware(), s.GetTryHistory)
-		// 	agentStoreAPI.GET("/try-history/:id", s.authCheckTK1TokenMiddleware(), s.GetTryHistoryDetail)
-		// }
-
-		// missionStoreAPI := rootAPI.Group("/mission-store")
-		// {
-		// 	missionStoreAPI.POST("/save", s.UploadMissionStore)
-		// 	missionStoreAPI.GET("/list", s.GetListMissionStore)
-		// 	missionStoreAPI.GET("/:id", s.GetMissionStoreDetail)
-		// 	missionStoreAPI.GET("/history/:id", s.GetMissionStoreHistory)
-		// 	missionStoreAPI.POST("/rating", s.RateMissionStore)
-		// 	missionStoreAPI.GET("/rating/:id", s.GetMissionStoreRating)
-		// }
 
 		bubbleAPI := rootAPI.Group("/bubble")
 		{
@@ -382,29 +393,27 @@ func (s *Server) Routers() {
 			knowledgeBasePublicApi.POST("/retrieve", s.retrieveKnowledge)
 		}
 
-		// agentInfraAPI := rootAPI.Group("/infra")
-		// {
-		// 	agentInfraAPI.Any("/:store_id/*path", s.proxyAgentStoreMiddleware("/api/infra"))
-		// }
+		infraTwitterApp := rootAPI.Group("/infra-twitter-app")
+		{
+			// infraTwitterApp.GET("/install", s.InfraTwitterAppAuthenInstall)
+			infraTwitterApp.GET("/callback", s.InfraTwitterAppAuthenCallback)
+			infraTwitterApp.GET("/tweets/search", s.middlewareApiLimit(3, 1*time.Second), s.InfraTwitterAppSearchRecentTweet)
+		}
 
-		// sampleTwitterApp := rootAPI.Group("/sample-twitter-app")
-		// {
-		// 	sampleTwitterApp.GET("/install", s.SampleTwitterAppAuthenInstall)
-		// 	sampleTwitterApp.GET("/callback", s.SampleTwitterAppAuthenCallback)
-		// 	sampleTwitterApp.GET("/get-bitcoin-price", s.SampleTwitterAppGetBTCPrice)
-		// 	sampleTwitterApp.POST("/tweet-message", s.SampleTwitterAppTweetMessage)
-		// }
+		utilityApi := rootAPI.Group("/utility", s.authCheckSignatureMiddleware())
+		// utilityApi := rootAPI.Group("/utility")
+		{
+			utilityApi.GET("/infra-twitter/info", s.GetInfraTwitterAppInfo)
+			utilityApi.POST("/twitter/post", s.UtilityPostTwitter)
+			// utilityApi.POST("/twitter/verify-deposit", s.UtilityTwitterVerifyDeposit)
+		}
 
-		// infraTwitterApp := rootAPI.Group("/infra-twitter-app")
-		// {
-		// 	infraTwitterApp.GET("/install", s.InfraTwitterAppAuthenInstall)
-		// 	infraTwitterApp.GET("/callback", s.InfraTwitterAppAuthenCallback)
-		// }
-
-		// storeTradingApp := rootAPI.Group("/store-defi-app")
-		// {
-		// 	storeTradingApp.GET("/install", s.StoreDefiAppAuthenInstall)
-		// 	storeTradingApp.GET("/wallet", s.StoreDefiAppGetWallet)
-		// }
+		vibeApi := rootAPI.Group("/vibe")
+		{
+			vibeApi.POST("/validate-ref-code", s.VibeValidateReferralCode)
+			vibeApi.GET("/dashboard", s.GetVibeDashBoards)
+			vibeApi.GET("/dashboard/:agent_id", s.GetVibeDashBoardsDetail)
+			vibeApi.POST("/deploy-token/:agent_id", s.authCheckTK1TokenMiddleware(), s.VibeTokenGetDeployInfo)
+		}
 	}
 }

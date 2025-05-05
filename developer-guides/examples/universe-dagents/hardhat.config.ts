@@ -123,6 +123,16 @@ const config: HardhatUserConfig = {
       zksync: false,
       gasPrice: "auto",
     } as any,
+    megaeth_testnet: {
+      url: process.env.RPC_URL || "",
+      chainId: 1338,
+      senderKey: process.env.PRIVATE_KEY,
+      promptSchedulerAddress: process.env.PROMPT_SCHEDULER_ADDRESS,
+      allowUnlimitedContractSize: true,
+      ethNetwork: "https://testnet.runechain.com/rpc", // The Ethereum Web3 RPC URL.
+      zksync: false,
+      gasPrice: "auto",
+    },
   },
   namedAccounts: {
     deployer: 0,

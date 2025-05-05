@@ -71,7 +71,7 @@ class EternalKnowledgeBase(KnowledgeBase):
             current_time = time.time()
 
             if current_time - started_at > self.DEFAULT_TIMEOUT_SECONDS:
-                raise Exception("Inference request timed out")
+                raise Exception(f"Inference request timed out; Receipt: {receipt}")
 
             async with httpx.AsyncClient() as client:
                 response = await client.get(

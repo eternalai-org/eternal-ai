@@ -3,6 +3,8 @@ package main_test
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -42,7 +44,14 @@ func init() {
 }
 
 func Test_JOB(t *testing.T) {
-	ts.MemeEventsByTransaction(context.Background(), 33139, "0xa9c5a7718f9919f311a2b554cdf756da198dfe371a8c3879ba3626c1c33d823a")
+
+	fmt.Println(
+		ts.JobCreateTokenInfo(context.Background()),
+	)
+
+	// data, err := ts.ValidateTweetContentGenerateVideoWithLLM2(context.Background(), "man opens shirt and shows his fat belly")
+	// fmt.Println(data, err)
+	// ts.MemeEventsByTransaction(context.Background(), 56, "")
 	// ts.AgentSnapshotPostCreate(context.Background(), 59166, "", "")
 	// ts.JobScanAgentTwitterPostForTA(context.Background())
 	// ts.RetryAgentDeployToken(context.Background(), 51265)
@@ -73,10 +82,41 @@ func Test_UTIL(t *testing.T) {
 	// 	},
 	// }
 	// jsonString, _ := json.Marshal(resp)
-	// ts.IpfsUploadDataForName(context.Background(), "infra_result_1", []byte(jsonString))
+	// fmt.Println(jsonString)
+	ts.JobUpdateTrendingTokens(context.Background())
+}
+
+func Test_OpenAI(t *testing.T) {
+	ts.GetTelegramMessage(context.Background())
 }
 
 func Test_SRV(t *testing.T) {
-	// ts.JobExecuteInfraTwitterAppRequest(context.Background())
-	ts.RetrySubmitResultByID(context.Background(), 1)
+	// ts.TestCrawlDexScreener(context.Background())
+	// ts.JobRobotScanBalanceSOL(context.Background())
+	ts.CreateClankerTokenForVideoByPostID(context.Background(), 35944)
+}
+
+func Test_UpdateTokenPrice(t *testing.T) {
+	ts.GenerateTokenInfoFromVideoPrompt(context.Background(), "Dancing characters in green frog hoodie in a grid", false)
+	// ts.GenerateTokenInfoWithLLMV2(context.Background(), "Dancing characters in green frog hoodie in a grid", false)
+	// ts.GetGifImageUrlFromTokenInfo("ABC", "ABC", "ABC")
+	// ts.CreateTokenInfo(context.Background(), 14754)
+}
+
+func Test_IPFS(t *testing.T) {
+	resp := map[string]any{
+		"name":          "XXX",
+		"description":   "XXX Description ...",
+		"symbol":        "XXX",
+		"image":         "https://xxx.jpg",
+		"animation_url": "https://xxx.mp4",
+		"content": map[string]any{
+			"uri":  "https://xxx.mp4",
+			"mime": "video/mp4",
+		},
+	}
+	jsonString, _ := json.Marshal(resp)
+	fmt.Println(
+		ts.IpfsUploadDataForName(context.Background(), "data", jsonString),
+	)
 }

@@ -3,7 +3,6 @@ package eth
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -25,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	ethsecp "github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -123,24 +121,6 @@ func WaitForTxReceiptRetry(client *ethclient.Client, tx common.Hash, sleep int, 
 			return txReceipt, nil
 		}
 	}
-}
-
-func WalletAddressFromCompressedPublicKey(publicKeyStr string) (string, error) {
-	pubBytes, err := hex.DecodeString(publicKeyStr)
-	if err != nil {
-		return "", err
-	}
-
-	x, y := ethsecp.DecompressPubkey(pubBytes)
-
-	pubkey := elliptic.Marshal(ethsecp.S256(), x, y)
-
-	ecdsaPub, err := crypto.UnmarshalPubkey(pubkey)
-	if err != nil {
-		return "", err
-	}
-	ethAddress := crypto.PubkeyToAddress(*ecdsaPub).String()
-	return ethAddress, nil
 }
 
 func GetAccountInfo(privKey string) (*ecdsa.PrivateKey, *common.Address, error) {

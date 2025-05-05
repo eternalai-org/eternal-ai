@@ -257,7 +257,7 @@ func (s *Service) ExternalWalletCreateOrder(ctx context.Context, apiKey string, 
 				wallet.Address,
 				&blockchainutils.SolanaTransferReq{
 					Mint:      req.Mint,
-					Amount:    uint64(req.Amount * math.Pow10(decimalsMint)),
+					Amount:    req.Amount * math.Pow10(decimalsMint),
 					ToAddress: req.Destination,
 				},
 			)

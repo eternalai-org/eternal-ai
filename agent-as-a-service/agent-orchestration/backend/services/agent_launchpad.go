@@ -20,7 +20,7 @@ import (
 func (s *Service) DeployMultisend(ctx context.Context, networkID uint64) (string, error) {
 	address, _, err := s.GetEthereumClient(context.Background(), networkID).
 		DeployMultisend(
-			s.GetAddressPrk(s.conf.GetConfigKeyString(networkID, "dao_pool_address")),
+			s.GetAddressPrk(s.conf.GetConfigKeyString(networkID, "meme_pool_address")),
 		)
 	if err != nil {
 		return "", errs.NewError(err)
@@ -32,7 +32,7 @@ func (s *Service) ProxyAdminDAOUpgrade(ctx context.Context, networkID uint64, pr
 	txHash, err := s.GetEthereumClient(context.Background(), networkID).
 		ProxyAdminUpgrade(
 			s.conf.GetConfigKeyString(networkID, "proxy_admin_address"),
-			s.GetAddressPrk(s.conf.GetConfigKeyString(networkID, "dao_pool_address")),
+			s.GetAddressPrk(s.conf.GetConfigKeyString(networkID, "meme_pool_address")),
 			helpers.HexToAddress(proxyAddress),
 			helpers.HexToAddress(s.conf.GetConfigKeyString(networkID, "dao_treasury_logic_address")),
 		)
@@ -45,7 +45,7 @@ func (s *Service) ProxyAdminDAOUpgrade(ctx context.Context, networkID uint64, pr
 func (s *Service) DeployDAOTreasuryLogic(ctx context.Context, networkID uint64) (string, error) {
 	address, _, err := s.GetEthereumClient(context.Background(), networkID).
 		DeployDAOTreasury(
-			s.GetAddressPrk(s.conf.GetConfigKeyString(networkID, "dao_pool_address")),
+			s.GetAddressPrk(s.conf.GetConfigKeyString(networkID, "meme_pool_address")),
 		)
 	if err != nil {
 		return "", errs.NewError(err)
@@ -63,7 +63,7 @@ func (s *Service) DeployDAOTreasuryAddress(ctx context.Context, networkID uint64
 	}
 	address, txHash, err := s.GetEthereumClient(context.Background(), networkID).
 		DeployTransparentUpgradeableProxy(
-			s.GetAddressPrk(s.conf.GetConfigKeyString(networkID, "dao_pool_address")),
+			s.GetAddressPrk(s.conf.GetConfigKeyString(networkID, "meme_pool_address")),
 			helpers.HexToAddress(s.conf.GetConfigKeyString(networkID, "dao_treasury_logic_address")),
 			helpers.HexToAddress(s.conf.GetConfigKeyString(networkID, "proxy_admin_address")),
 			data,

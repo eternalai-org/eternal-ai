@@ -44,7 +44,7 @@ Again, shortly think about what to do and answer in the required format!
 
 def parse_conversational_react_response(response: str, verbose=True) -> dict:
     thought_pat = re.compile(
-        r"<think>(.*?)</think>", re.IGNORECASE | re.DOTALL
+        r"[<think>]?(.*?)</think>", re.IGNORECASE | re.DOTALL
     )
     action_pat = re.compile(
         r"<action>(.*?)</action>", re.IGNORECASE | re.DOTALL

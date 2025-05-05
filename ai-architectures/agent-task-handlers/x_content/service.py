@@ -72,13 +72,13 @@ def task_cls_resolver(log: ReasoningLog) -> Optional[MultiStepTaskBase]:
         if log.toolset == ToolSet.TRADING:
             return tasks.social_agent.react_agent_for_trading.TradingTask
 
-        if log.model in [
-            ModelName.DEEPSEEK_R1,
-            ModelName.DEEPSEEK_R1_DISTILL_LLAMA_70B,
-        ]:
-            return (
-                tasks.social_agent.react_agent_use_deepseek_r1.ReactAgentUsingDeepSeekR1
-            )
+        # if log.model in [
+        #     ModelName.DEEPSEEK_R1,
+        #     ModelName.DEEPSEEK_R1_DISTILL_LLAMA_70B,
+        # ]:
+        #     return (
+        #         tasks.social_agent.react_agent_use_deepseek_r1.ReactAgentUsingDeepSeekR1
+        #     )
 
         return tasks.social_agent.react_agent.ReactAgent
 

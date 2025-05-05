@@ -29,7 +29,7 @@ JUDGE_GAME_LOCK_EXPIRY = 1000 * 60 * 60 * 2
 # 2 hours
 
 # Reply tweet templates
-GAME_CREATED_TWEET = "A challenge is created! Place your bet by deposit EAI on Base to the wallet of who you think will win:\n\n Bet will close in {bet_hours:02d} hours {bet_minutes:02d} minutes\nGame will end in {hours:02d} hours {minutes:02d} minutes\n\n"
+GAME_CREATED_TWEET = "A challenge is created! Place your bet by deposit EAI on Base to the wallet of who you think will win:\n\nBet will close in {bet_hours:02d} hours {bet_minutes:02d} minutes\nGame will end in {hours:02d} hours {minutes:02d} minutes\n\n"
 # Constants for tweet replies
 WINNER_TWEET_TEMPLATE = "The winner is {}"
 NO_WINNER_TWEET = "No winner"

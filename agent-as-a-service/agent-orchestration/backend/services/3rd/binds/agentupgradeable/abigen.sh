@@ -1,0 +1,1 @@
+abigen --abi=AgentUpgradeable.json --pkg=agentupgradeable --type AgentUpgradeable --out=AgentUpgradeable.go

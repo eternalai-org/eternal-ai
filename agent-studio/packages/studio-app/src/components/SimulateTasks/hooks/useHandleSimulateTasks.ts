@@ -5,7 +5,6 @@ import AgentAPI from "../../../services/apis/agent";
 
 export default function useHandleSimulateTasks() {
   const { simulatePrompt } = useStudioAgentStore();
-  console.log("🚀 ~ useHandleSimulateTasks ~ simulatePrompt:", simulatePrompt);
 
   const [isLoading, setIsLoading] = useState(false);
 

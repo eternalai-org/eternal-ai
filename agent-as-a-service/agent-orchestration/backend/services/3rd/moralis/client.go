@@ -98,3 +98,49 @@ func (c *Client) GetNFTs(chain string, address string, cursor string, limit int)
 	}
 	return &rs, nil
 }
+
+type TimeRange struct {
+	OneHour        float64 `json:"1h"`
+	FourHour       float64 `json:"4h"`
+	TwelveHour     float64 `json:"12h"`
+	TwentyFourHour float64 `json:"24h"`
+}
+
+type TrendingToken struct {
+	ChainId            string    `json:"chainId"`
+	TokenAddress       string    `json:"tokenAddress"`
+	Name               string    `json:"name"`
+	UniqueName         string    `json:"uniqueName"`
+	Symbol             string    `json:"symbol"`
+	Decimals           int       `json:"decimals"`
+	Logo               string    `json:"logo"`
+	UsdPrice           float64   `json:"usdPrice"`
+	CreatedAt          int64     `json:"createdAt"`
+	MarketCap          float64   `json:"marketCap"`
+	LiquidityUsd       float64   `json:"liquidityUsd"`
+	Holders            int       `json:"holders"`
+	PricePercentChange TimeRange `json:"pricePercentChange"`
+	TotalVolume        TimeRange `json:"totalVolume"`
+	Transactions       TimeRange `json:"transactions"`
+	BuyTransactions    TimeRange `json:"buyTransactions"`
+	SellTransactions   TimeRange `json:"sellTransactions"`
+	Buyers             TimeRange `json:"buyers"`
+	Sellers            TimeRange `json:"sellers"`
+}
+
+func (c *Client) GetTrendingTokens(chain string) ([]TrendingToken, error) {
+	url := fmt.Sprintf("https://deep-index.moralis.io/api/v2.2/tokens/trending?chain=%s&limit=100", url.QueryEscape(chain))
+
+	var tokens []TrendingToken
+	_, err := c.getJSON(
+		url,
+		map[string]string{
+			"X-API-Key": c.APIKey,
+		},
+		&tokens,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return tokens, nil
+}

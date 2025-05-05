@@ -53,6 +53,12 @@ const (
 	HYPE_CHAIN_ID             = uint64(999)
 	MONAD_TESTNET_CHAIN_ID    = uint64(10143)
 	MEGAETH_TESTNET_CHAIN_ID  = uint64(1338)
+	BASE_SEPOLIA_CHAIN_ID     = uint64(84532)
+	CELO_CHAIN_ID             = uint64(42220)
+
+	LOWER_PRICE_USD = 2800
+	UPPER_PRICE_USD = 1000000000
+	TOKEN_SUPPLY    = 1000000000
 )
 
 var CHAIN_NAME_MAP = map[uint64]string{
@@ -80,6 +86,8 @@ var CHAIN_NAME_MAP = map[uint64]string{
 	HYPE_CHAIN_ID:             "HYPER EVM",
 	MONAD_TESTNET_CHAIN_ID:    "MONAD TESTNET",
 	MEGAETH_TESTNET_CHAIN_ID:  "MEGAETH TESTNET",
+	BASE_SEPOLIA_CHAIN_ID:     "BASE SEPOLIA",
+	CELO_CHAIN_ID:             "CELO",
 }
 
 var MAP_TOOLSET_NAME = map[string]string{
@@ -806,3 +814,120 @@ func GetImageUrl(imageUrl string) string {
 	}
 	return imageUrl
 }
+
+var (
+	ETERNALAI_LIQUIDITY_SUPPORTED_NETWORKS = []map[string]any{
+		{
+			"network": "ETH",
+			"name":    "Ethereum",
+			"icon":    "https://eternalai.org/icons/coins/ic-eth.svg",
+			"id":      ETHEREUM_CHAIN_ID,
+			"explorer": []map[string]any{
+				{
+					"name":   "EtherScan",
+					"url":    "https://etherscan.io/",
+					"icon":   "https://eternalai.org/icons/coins/ic-ether-scan.png",
+					"okLink": "https://www.okx.com/web3/explorer/eth/",
+				},
+			},
+		},
+		{
+			"network": "BASE",
+			"name":    "Base",
+			"icon":    "https://eternalai.org/icons/blockchains/ic_base.svg",
+			"id":      BASE_CHAIN_ID,
+			"explorer": []map[string]any{
+				{
+					"name":   "BaseScan",
+					"url":    "https://basescan.org/",
+					"icon":   "https://eternalai.org/icons/coins/ic-base-scan.png",
+					"okLink": "https://www.okx.com/web3/explorer/base/",
+				},
+			},
+		},
+		{
+			"network": "ARBITRUM",
+			"name":    "Arbitrum",
+			"icon":    "https://eternalai.org/icons/blockchains/ic_arbitrum.svg",
+			"id":      ARBITRUM_CHAIN_ID,
+			"explorer": []map[string]any{
+				{
+					"name":   "ArbitrumScan",
+					"url":    "https://arbiscan.io/",
+					"icon":   "https://eternalai.org/icons/blockchains/ic_arbitrum.svg",
+					"okLink": "https://www.okx.com/web3/explorer/arbitrum/",
+				},
+			},
+		},
+		{
+			"network": "SOL",
+			"name":    "Solana",
+			"icon":    "https://eternalai.org/icons/blockchains/ic_solana.svg",
+			"id":      SOLANA_CHAIN_ID,
+			"explorer": []map[string]any{
+				{
+					"name":   "SolScan",
+					"url":    "https://solscan.io/",
+					"icon":   "https://eternalai.org/icons/coins/ic-sol-scan.svg",
+					"okLink": "https://www.okx.com/web3/explorer/sol/",
+				},
+			},
+		},
+		{
+			"network": "BSC",
+			"name":    "BNB Smart Chain",
+			"icon":    "https://eternalai.org/icons/coins/ic-bsc.png",
+			"id":      BSC_CHAIN_ID,
+			"explorer": []map[string]any{
+				{
+					"name":   "BscScan",
+					"url":    "https://bscscan.com/",
+					"icon":   "https://eternalai.org/icons/coins/ic-bsc-scan.svg",
+					"okLink": "https://www.okx.com/web3/explorer/bsc/",
+				},
+			},
+		},
+		{
+			"network": "APE",
+			"name":    "ApeChain",
+			"icon":    "https://eternalai.org/icons/coins/ic-ape.svg",
+			"id":      APE_CHAIN_ID,
+			"explorer": []map[string]any{
+				{
+					"name":   "ApeScan",
+					"url":    "https://apescan.io/",
+					"icon":   "https://eternalai.org/icons/coins/ic-ape.svg",
+					"okLink": "https://www.okx.com/web3/explorer/apechain/",
+				},
+			},
+		},
+		{
+			"network": "AVAX",
+			"name":    "Avalanche C-Chain",
+			"icon":    "https://eternalai.org/icons/blockchains/ic_avax.svg",
+			"id":      AVALANCHE_C_CHAIN_ID,
+			"explorer": []map[string]any{
+				{
+					"name":   "AVAXScan",
+					"url":    "https://subnets.avax.network/c-chain",
+					"icon":   "https://eternalai.org/icons/blockchains/ic_avax.svg",
+					"okLink": "https://www.okx.com/web3/explorer/avax/",
+				},
+			},
+		},
+		{
+			"network": "Celo",
+			"name":    "Celo",
+			"icon":    "https://eternalai.org/icons/blockchains/ic-celo.svg",
+			"id":      CELO_CHAIN_ID,
+			"explorer": []map[string]any{
+				{
+					"name":   "CeloScan",
+					"url":    "https://celoscan.io/",
+					"icon":   "https://eternalai.org/icons/blockchains/ic-celo.svg",
+					"okLink": "",
+				},
+			},
+		},
+	}
+)

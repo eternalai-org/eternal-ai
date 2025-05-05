@@ -24,4 +24,4 @@ COPY server.py /app
 COPY app /app/app
 
 EXPOSE 8000
-CMD ["conda", "run", "--no-capture-output", "-n", "env", "python", "-O", "server.py"]
+CMD ["/root/miniconda3/envs/env/bin/python", "-O", "server.py"]

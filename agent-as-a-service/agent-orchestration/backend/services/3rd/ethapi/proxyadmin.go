@@ -93,7 +93,7 @@ func (c *Client) ProxyAdminUpgrade(contractAddr string, prkHex string, proxyAddr
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}

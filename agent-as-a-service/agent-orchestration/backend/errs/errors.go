@@ -28,7 +28,8 @@ var (
 	ErrTwitterIdNotFound     = &Error{Code: -1011, Message: "Something went wrong. Please try again."}
 	ErrRewardNotFound        = &Error{Code: -1012, Message: "Something went wrong. Please try again."}
 	ErrUnAuthorization       = &Error{Code: -1013, Message: "Something went wrong. Please try again."}
-	ErrInvalidRequest        = &Error{Code: -1013, Message: "Invalid request. Please try again."}
+	ErrInvalidRequest        = &Error{Code: -1014, Message: "Invalid request. Please try again."}
+	ErrInternalServerError   = &Error{Code: -1015, Message: "Something went wrong. Please try again."}
 
 	ErrAlreadyPurchase         = &Error{Code: -2001, Message: "Already purchase apps. Please try again."}
 	ErrAppNotFound             = &Error{Code: -2002, Message: "Something went wrong. Please try again."}
@@ -51,6 +52,13 @@ var (
 	ErrApiUrlNotHealth         = &Error{Code: -2016, Message: "Api Url not Health"}
 
 	ErrApiKeyRateLimited = &Error{Code: -2016, Message: "API Key rate limit"}
+	ErrReferralCodeUsed  = &Error{Code: -2017, Message: "Referral code already used"}
+
+	ErrAgentUtilityNotAuthen       = &Error{Code: -3000, Message: "Please authentican with this link and try again"}
+	ErrAgentUtilityInvalidBalance  = &Error{Code: -3001, Message: "Insufficient balance! You need at least 1 $EAI to proceed with address {address} in Base."}
+	ErrAgentUtilityPostTweetFailed = &Error{Code: -3002, Message: "Post tweet failed. Please try again."}
+	ErrAgentUtilitySystemError     = &Error{Code: -3003, Message: "Something went wrong. Please try again."}
+	ErrAgentUtilityNotFound        = &Error{Code: -3004, Message: "Please authentican with this link and try again"}
 )
 
 type Error struct {

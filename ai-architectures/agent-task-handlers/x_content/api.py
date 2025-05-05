@@ -52,6 +52,7 @@ def get_chat_request_state_handler():
 
 router = APIRouter()
 
+
 @router.get(
     "/api/twitter-news",
     dependencies=[
@@ -88,7 +89,7 @@ async def get_twitter_news(query: str) -> JSONResponse:
 async def get_bing_news(query: str) -> JSONResponse:
 
     result = await sync2async(bing_search.search_from_bing)(
-        query, top_k=10
+        query, top_k=10, task_name="api:bing-news"
     )
 
     return APIResponse(
@@ -120,7 +121,7 @@ async def get_post_v3_sample_content(
 
 @router.get("/debug/redis", dependencies=[Depends(verify_x_token)])
 async def get_redis_by_key(key: str):
-    
+
     async with aredis.Redis(
         connection_pool=redis_wrapper.get_aio_redis_connection_pool()
     ) as client:
@@ -130,6 +131,7 @@ async def get_redis_by_key(key: str):
         return res
     else:
         return ""
+
 
 @router.post(
     "/v1/twin/submit",
@@ -142,13 +144,12 @@ async def twin_task_submit(
     task_id = f"task_{int(time.time())}"
 
     background_tasks.add_task(
-        logger.info, 
-        f"[twin_task_submit] Received request: task_id {task_id}, request={compress_kwargs(**request.model_dump())}"
+        logger.info,
+        f"[twin_task_submit] Received request: task_id {task_id}, request={compress_kwargs(**request.model_dump())}",
     )
 
     background_tasks.add_task(
-        twin_service.generate_twin, 
-        request.agent_id, request.twitter_ids
+        twin_service.generate_twin, request.agent_id, request.twitter_ids
     )
 
     return TwinTaskSubmitResponse(status="success", task_id=task_id)
@@ -160,23 +161,20 @@ async def enqueue_api(
 ) -> ReasoningLog:
 
     background_tasks.add_task(
-        logger.info, 
-        f"[enqueue_api] Received request: {compress_kwargs(**request.model_dump())}"
+        logger.info,
+        f"[enqueue_api] Received request: {compress_kwargs(**request.model_dump())}",
     )
 
     if request.state == MissionChainState.NEW:
         background_tasks.add_task(
-            task_utils.notify_status_reasoning_log, 
-            request
+            task_utils.notify_status_reasoning_log, request
         )
 
-    background_tasks.add_task(
-        service_v2_handle_request, 
-        request
-    )
+    background_tasks.add_task(service_v2_handle_request, request)
 
     await get_state_handler().acommit(request)
     return request
+
 
 @router.get("/async/get", dependencies=[Depends(verify_x_token)])
 async def get_result_api(id: str, thought_only: bool = False) -> JSONResponse:
@@ -228,7 +226,9 @@ async def enqueue_chat(
 
 @router.get("/async/chat/get", dependencies=[Depends(verify_x_token)])
 async def get_chat_result_api(id: str) -> JSONResponse:
-    request = await get_chat_request_state_handler().a_get(id, none_if_error=True)
+    request = await get_chat_request_state_handler().a_get(
+        id, none_if_error=True
+    )
 
     if request is None:
         return JSONResponse(

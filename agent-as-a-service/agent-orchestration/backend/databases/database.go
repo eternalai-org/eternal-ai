@@ -42,7 +42,7 @@ func Init(dbURL string, migrateFunc func(db *gorm.DB) error, idleNum int, openNu
 }
 
 func MigrateDBMain(db *gorm.DB) error {
-	allTables := []interface{}{
+	allTables := []any{
 		(*models.BlockScanInfo)(nil),
 		(*models.AppConfig)(nil),
 		(*models.BTCL1InscribeTx)(nil),
@@ -53,6 +53,7 @@ func MigrateDBMain(db *gorm.DB) error {
 		(*models.Erc1155Holder)(nil),
 		(*models.TwitterPost)(nil),
 		(*models.TwitterInfo)(nil),
+		(*models.AgentCategory)(nil),
 		(*models.AgentInfo)(nil),
 		(*models.AgentTwitterPost)(nil),
 		(*models.UserTwitterPost)(nil),
@@ -74,6 +75,7 @@ func MigrateDBMain(db *gorm.DB) error {
 		(*models.AgentChainFee)(nil),
 		// meme
 		(*models.Meme)(nil),
+		(*models.MemeFeesCollected)(nil),
 
 		(*models.ApiSubscriptionPackage)(nil),
 		(*models.ApiSubscriptionKey)(nil),
@@ -117,13 +119,27 @@ func MigrateDBMain(db *gorm.DB) error {
 		(*models.SampleTwitterApp)(nil),
 
 		(*models.InfraTwitterApp)(nil),
+		(*models.InfraTwitterTopupTx)(nil),
 
 		(*models.StoreDefiApp)(nil),
 		(*models.AgentStoreTry)(nil),
 		(*models.AgentStoreTryDetail)(nil),
 
 		(*models.AgentInfoInstall)(nil),
-		(*models.InfraRequest)(nil),
+
+		(*models.AgentLibrary)(nil),
+		(*models.AgentUtilityInstall)(nil),
+		(*models.AgentUtilityRecentChat)(nil),
+		(*models.ClankerVideoToken)(nil),
+		(*models.AgentReactionHistory)(nil),
+		(*models.PrivyWallet)(nil),
+		(*models.RobotSaleWallet)(nil),
+		(*models.RobotProject)(nil),
+		(*models.RobotTokenTransfer)(nil),
+		(*models.TrendingToken)(nil),
+		(*models.VibeWhiteList)(nil),
+		(*models.VibeReferralCode)(nil),
+		(*models.AgentUserComment)(nil),
 	}
 
 	if err := db.AutoMigrate(allTables...).Error; err != nil {

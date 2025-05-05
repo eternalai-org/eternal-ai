@@ -30,6 +30,7 @@ class BrainstormTweetService:
         self.hermes = create_llm(
             base_url=const.SELF_HOSTED_HERMES_70B_URL + "/v1",
             model_id=const.SELF_HOSTED_HERMES_70B_MODEL_IDENTITY,
+            api_key=const.SELF_HOSTED_HERMES_70B_API_KEY,
             temperature=1,
         )
 
@@ -97,15 +98,13 @@ User query:
         kn_base: KnowledgeBase,
         top_k: int = 10,
         retry: int = RETRY,
+        task_name: str = "N/A",
     ) -> str:
         context_tweets, err = await sync2async(get_random_from_collections)(
-            kn_base.get_kn_ids(), 
-            n=10
+            kn_base.get_kn_ids(), n=10
         )
 
-        debug_data = {
-            "context_tweets": context_tweets
-        }
+        debug_data = {"context_tweets": context_tweets}
 
         for attempt in range(retry):
             try:
@@ -121,8 +120,7 @@ User query:
                     )
 
                     news = await sync2async(search_from_bing)(
-                        query, 
-                        top_k=10
+                        query, top_k=10, task_name=task_name
                     )
 
                     random_news = random.sample(news, min(1, len(news)))

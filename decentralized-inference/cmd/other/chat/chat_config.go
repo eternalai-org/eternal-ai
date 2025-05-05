@@ -11,11 +11,12 @@ import (
 	"decentralized-inference/internal/rest"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func collectChatConfigInformation() *config.ChatConfig {
@@ -157,6 +158,11 @@ func GetSystemPromptFromContract(ctx context.Context, agentId int) error {
 
 func LoadChatConfig() (*config.ChatConfig, error) {
 	pathConfigFromDeCompute := "decentralized-compute/worker-hub/env/local_contracts.json"
+	value := os.Getenv("CONFIG_PATH")
+	if value != "" {
+		pathConfigFromDeCompute = value
+	}
+
 	file, err := os.Open(pathConfigFromDeCompute)
 	if err != nil {
 		return nil, fmt.Errorf("env/local_contracts.json from decentralized-compute MODULE is missing, please make sure config file is available")
@@ -178,7 +184,14 @@ func LoadChatConfig() (*config.ChatConfig, error) {
 
 func LoadBaseSeverDecentralizedInferenceConfig() (string, error) {
 	defaultServerBaseUrl := "http://localhost:8484"
-	file, err := os.Open("decentralized-inference/chat_config.json")
+
+	chatConfigPath := "decentralized-inference/chat_config.json"
+	value := os.Getenv("CONFIG_PATH")
+	if value != "" {
+		chatConfigPath = value
+	}
+
+	file, err := os.Open(chatConfigPath)
 	if err != nil {
 		return defaultServerBaseUrl, nil
 	}

@@ -81,7 +81,7 @@ func (c *Client) ERC20RealWorldAgentSubmitSolution(contractAddr string, prkHex s
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}
@@ -163,7 +163,7 @@ func (c *Client) ERC20RealWorldAgentAct(contractAddr string, prkHex string, uuid
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}

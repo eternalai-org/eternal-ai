@@ -553,6 +553,29 @@ func (c *Client) GetTwitterOAuthTokenWithKeyForCreateAgent(clientID, clientSecre
 	return &resp, nil
 }
 
+func (c *Client) GetTwitterOAuthTokenWithKeyForVideoReward(clientID, clientSecret, code string, callbackUrl, address string) (*TwitterTokenResponse, error) {
+	var resp TwitterTokenResponse
+	redirectUri := fmt.Sprintf(`%s?callback=%s&address=%s&agent_id=2&client_id=%s`, c.RedirectUri, callbackUrl, address, clientID)
+	postData := map[string]interface{}{
+		"client_id":     c.OauthClientId,
+		"code_verifier": "challenge",
+		"redirect_uri":  redirectUri,
+		"grant_type":    "authorization_code",
+		"code":          code,
+	}
+
+	err := c.postJSONWithKey(
+		TWITTER_OAUTH_TOKEN_URL, clientID, clientSecret,
+		map[string]string{},
+		postData,
+		&resp,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 func (c *Client) GetTwitterOAuthTokenWithKeyForDeveloper(clientID, clientSecret, code string, callbackUrl, address string) (*TwitterTokenResponse, error) {
 	var resp TwitterTokenResponse
 	redirectUri := fmt.Sprintf(`%s?callback=%s&address=%s&agent_id=0&client_id=%s`, c.RedirectUri, callbackUrl, address, clientID)
@@ -1101,4 +1124,42 @@ func (c *Client) extractNextToken(data map[string]interface{}) string {
 		}
 	}
 	return ""
+}
+
+func (c *Client) PostTweetWithVideo(tweetContent, videoURL string, additionalOwners []string) error {
+	config := oauth1.NewConfig(c.ConsumerKey, c.ConsumerSecret)
+	token := oauth1.NewToken(c.AccessToken, c.AccessSecret)
+	httpClient := config.Client(oauth1.NoContext, token)
+	twitterApiUrl := "https://api.twitter.com/2/tweets"
+	mediaID, err := c.UploadVideo(videoURL, additionalOwners)
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{
+		"text": tweetContent,
+	}
+	if mediaID != "" {
+		body["media"] = map[string]interface{}{
+			"media_ids": []string{mediaID},
+		}
+	}
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", twitterApiUrl, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusCreated {
+		return nil
+	} else {
+		return errs.ErrBadRequest
+	}
 }

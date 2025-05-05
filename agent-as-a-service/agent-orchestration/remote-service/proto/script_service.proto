@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package script;
+
+option go_package = "agent-remote-svc/proto";
+
+service ScriptService {
+  rpc ExecuteRPC (RPCRequest) returns (stream RPCResponse) {}
+}
+
+message RPCRequest {
+  string api_key = 1;
+  int64 id = 2;  // Unique identifier for the request
+  string method = 3;
+  string params = 4;  // JSON string containing parameters
+}
+
+message RPCResponse {
+  int64 id = 1;  // Echo back the request ID for correlation
+  string method = 2;  // Echo back the method for correlation
+  string output = 3;
+  bool is_error = 4;
+} 

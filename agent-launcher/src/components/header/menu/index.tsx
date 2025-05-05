@@ -1,6 +1,6 @@
 import {
+  Box,
   Flex,
-  HStack,
   Image,
   Link,
   Popover,
@@ -8,49 +8,44 @@ import {
   PopoverBody,
   PopoverContent,
   PopoverTrigger,
-  Text
+  Text,
 } from "@chakra-ui/react";
-import s from './styles.module.scss';
-import {NAV_ITEMS, NavItem} from "./menuConfig.ts";
-import ROUTERS from "../../../constants/route-path.ts";
-import cs from 'clsx';
-import {useLocation} from "react-router-dom";
+import cs from "clsx";
+import { useLocation } from "react-router-dom";
+import { NAV_ITEMS, NavItem } from "./menuConfig.ts";
+import s from "./styles.module.scss";
 
-const ProductMenu = ({navItem}: {navItem: NavItem}) => {
+const ProductMenu = ({ navItem }: { navItem: NavItem }) => {
   return (
-    <Popover
-      trigger="hover"
-      key={navItem.label}
-      placement="bottom-start"
-    >
+    <Popover trigger="hover" key={navItem.label} placement="bottom-start">
       <PopoverTrigger>
-        <Flex alignItems={'center'} gap="4px">
+        <Flex alignItems={"center"} gap="4px">
           <Text
-            fontSize={'14px'}
+            fontSize={"14px"}
             fontWeight={500}
-            lineHeight={'110%'}
-            letterSpacing={'0.03em'}
+            lineHeight={"110%"}
+            letterSpacing={"0.03em"}
           >
             {navItem.label}
           </Text>
-          <Image src={`/icons/ic-angle-down.svg`}/>
+          <Image src={`/icons/ic-angle-down.svg`} />
         </Flex>
       </PopoverTrigger>
       <PopoverContent
         border="1px solid rgba(229, 231, 235, 0.40)"
         // borderBlock={'12px'}
-        borderRadius={'12px'}
-        boxShadow={'0px 0px 24px -6px rgba(0, 0, 0, 0.12)'}
+        borderRadius={"12px"}
+        boxShadow={"0px 0px 24px -6px rgba(0, 0, 0, 0.12)"}
         p="40px"
-        w={'fit-content'}
+        w={"fit-content"}
       >
         <PopoverArrow />
 
         <PopoverBody
           p={0}
-          display={'flex'}
-          flexDirection={'column'}
-          gap={'40px'}
+          display={"flex"}
+          flexDirection={"column"}
+          gap={"40px"}
         >
           <div className={s.dropdownItem}>
             <p className={s.dropdownItem_heading}>Agentic AI</p>
@@ -61,7 +56,7 @@ const ProductMenu = ({navItem}: {navItem: NavItem}) => {
                 className={s.dropdownItem_wrap_item}
               >
                 <Image
-                  src={'/icons_header/agent_launch.png'}
+                  src={"/icons_header/agent_launch.png"}
                   alt=""
                   width={20}
                   height={20}
@@ -74,7 +69,7 @@ const ProductMenu = ({navItem}: {navItem: NavItem}) => {
                 className={s.dropdownItem_wrap_item}
               >
                 <Image
-                  src={'/icons_header/agent_studio.png'}
+                  src={"/icons_header/agent_studio.png"}
                   alt=""
                   width={20}
                   height={20}
@@ -87,7 +82,7 @@ const ProductMenu = ({navItem}: {navItem: NavItem}) => {
                 className={s.dropdownItem_wrap_item}
               >
                 <Image
-                  src={'/icons_header/agent_genomic.png'}
+                  src={"/icons_header/agent_genomic.png"}
                   alt=""
                   width={20}
                   height={20}
@@ -104,12 +99,7 @@ const ProductMenu = ({navItem}: {navItem: NavItem}) => {
                 rel="noopener noreferrer"
                 className={s.dropdownItem_wrap_item}
               >
-                <Image
-                  src={'/robot_01.png'}
-                  alt=""
-                  width={20}
-                  height={20}
-                />
+                <Image src={"/robot_01.png"} alt="" width={20} height={20} />
                 <p>CryptoAgents</p>
               </Link>
               <Link
@@ -118,7 +108,7 @@ const ProductMenu = ({navItem}: {navItem: NavItem}) => {
                 className={s.dropdownItem_wrap_item}
               >
                 <Image
-                  src={'/icons_header/perceptron.png'}
+                  src={"/icons_header/perceptron.png"}
                   alt=""
                   width={20}
                   height={20}
@@ -136,7 +126,7 @@ const ProductMenu = ({navItem}: {navItem: NavItem}) => {
                 className={s.dropdownItem_wrap_item}
               >
                 <Image
-                  src={'/icons_header/neuron.png'}
+                  src={"/icons_header/neuron.png"}
                   alt=""
                   width={20}
                   height={20}
@@ -154,7 +144,7 @@ const ProductMenu = ({navItem}: {navItem: NavItem}) => {
                 className={s.dropdownItem_wrap_item}
               >
                 <Image
-                  src={'/icons_header/microscope.svg'}
+                  src={"/icons_header/microscope.svg"}
                   alt=""
                   width={20}
                   height={20}
@@ -168,7 +158,7 @@ const ProductMenu = ({navItem}: {navItem: NavItem}) => {
                 className={s.dropdownItem_wrap_item}
               >
                 <Image
-                  src={'/icons_header/note-text.svg'}
+                  src={"/icons_header/note-text.svg"}
                   alt=""
                   width={20}
                   height={20}
@@ -180,59 +170,48 @@ const ProductMenu = ({navItem}: {navItem: NavItem}) => {
         </PopoverBody>
       </PopoverContent>
     </Popover>
-  )
-}
-
-type Props = {
-  primaryColor?: 'black' | 'white';
-  listNavItems?: Array<NavItem>;
+  );
 };
 
+type Props = {
+  primaryColor?: "black" | "white";
+  listNavItems?: Array<NavItem>;
+};
 
 const HeaderMenu = (props: Props) => {
   const location = useLocation();
   const pathName = location.pathname;
-  console.log('stephen: pathname', pathName);
+  console.log("stephen: pathname", pathName);
 
   return (
-    <HStack
+    <Flex
       className={s.deskMenu}
-      direction={'row'}
-      spacing={['40px', '40px']}
-      style={{ '--color': props.primaryColor || 'white' } as any}
+      style={{ "--color": props.primaryColor || "white" } as any}
     >
       {NAV_ITEMS?.map((navItem) => {
-        const isEai = navItem.href === ROUTERS.AI_EAI;
-        if (navItem.isDropdown && navItem.label === 'Products') {
-          return (
-            <ProductMenu navItem={navItem} />
-          );
-        }
-
         return (
           <Link
             className={cs(
               navItem.rootHref
                 ? pathName.includes(navItem.rootHref)
                   ? s.isActive
-                  : ''
+                  : ""
                 : pathName === navItem.href
-                  ? s.isActive
-                  : '',
-              isEai && s.isEai,
-              s[props?.primaryColor || 'white'],
+                ? s.isActive
+                : "",
+              s[props?.primaryColor || "white"]
             )}
             key={navItem.label}
-            href={navItem.href ?? '#'}
-            target={navItem.isNewWindow ? '_blank' : '_self'}
-            color={props?.primaryColor || 'white'}
+            href={navItem.href ?? "#"}
+            target={navItem.isNewWindow ? "_blank" : "_self"}
+            color={props?.primaryColor || "white"}
           >
-            {/* {isEai && <EAIIcon theme={props?.primaryColor || 'white'} />} */}
-            {navItem.label}
+            <Box className={cs(s.borderLeft, s[navItem.className as any])} />
+            <Image src={navItem.icon} />
           </Link>
         );
       })}
-    </HStack>
+    </Flex>
   );
 };
 

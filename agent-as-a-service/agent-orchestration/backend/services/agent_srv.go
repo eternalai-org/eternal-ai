@@ -114,18 +114,26 @@ func (s *Service) GenerateTipAddress(ctx context.Context, agentInfoID uint) erro
 	return nil
 }
 
-func (s *Service) TwitterOauthCallbackV1(ctx context.Context, callbackUrl, address, code, agentID, clientID string) error {
+func (s *Service) TwitterOauthCallbackV1(ctx context.Context, callbackUrl, address, code, agentID, clientID string) (map[string]string, error) {
+	var err error
+	var resp map[string]string
 	if agentID == "" {
-		return s.TwitterOauthCallbackForRelink(ctx, callbackUrl, address, code, clientID)
+		err = s.TwitterOauthCallbackForRelink(ctx, callbackUrl, address, code, clientID)
+		return resp, err
 	} else if agentID == "0" {
-		return s.TwitterOauthCallbackForApiSubscription(ctx, callbackUrl, address, code, clientID)
+		err = s.TwitterOauthCallbackForApiSubscription(ctx, callbackUrl, address, code, clientID)
+		return resp, err
 	} else if agentID == "1" {
-		return s.TwitterOauthCallbackForCreateAgent(ctx, callbackUrl, address, code, clientID)
+		err = s.TwitterOauthCallbackForCreateAgent(ctx, callbackUrl, address, code, clientID)
+		return resp, err
+	} else if agentID == "2" {
+		resp, err = s.TwitterOauthCallbackForClaimVideoReward(ctx, callbackUrl, address, code, clientID)
+		return resp, err
 	}
 
 	agentInfo, err := s.SyncAgentInfoDetailByAgentID(ctx, agentID)
 	if err != nil {
-		return errs.NewError(err)
+		return nil, errs.NewError(err)
 	}
 
 	if agentInfo != nil {
@@ -146,18 +154,18 @@ func (s *Service) TwitterOauthCallbackV1(ctx context.Context, callbackUrl, addre
 			oauthClientId, oauthClientSecret,
 			code, callbackUrl, address, agentID)
 		if err != nil {
-			return errs.NewError(err)
+			return nil, errs.NewError(err)
 		}
 
 		if respOauth != nil && respOauth.AccessToken != "" {
 			twitterUser, err := s.twitterAPI.GetTwitterMe(respOauth.AccessToken)
 			if err != nil {
-				return errs.NewError(err)
+				return nil, errs.NewError(err)
 			}
 
 			user, err := s.GetUser(daos.GetDBMainCtx(ctx), agentInfo.NetworkID, address, true)
 			if err != nil {
-				return errs.NewError(err)
+				return nil, errs.NewError(err)
 			}
 
 			user.TwitterID = twitterUser.ID
@@ -167,7 +175,7 @@ func (s *Service) TwitterOauthCallbackV1(ctx context.Context, callbackUrl, addre
 
 			err = s.dao.Save(daos.GetDBMainCtx(ctx), user)
 			if err != nil {
-				return errs.NewError(err)
+				return nil, errs.NewError(err)
 			}
 
 			//
@@ -178,7 +186,7 @@ func (s *Service) TwitterOauthCallbackV1(ctx context.Context, callbackUrl, addre
 				map[string][]interface{}{}, false,
 			)
 			if err != nil {
-				return errs.NewError(err)
+				return nil, errs.NewError(err)
 			}
 
 			if twitterInfo == nil {
@@ -204,7 +212,7 @@ func (s *Service) TwitterOauthCallbackV1(ctx context.Context, callbackUrl, addre
 			twitterInfo.ExpiredAt = &expiredAt
 			err = s.dao.Save(daos.GetDBMainCtx(ctx), twitterInfo)
 			if err != nil {
-				return errs.NewError(err)
+				return nil, errs.NewError(err)
 			}
 			//
 
@@ -220,7 +228,7 @@ func (s *Service) TwitterOauthCallbackV1(ctx context.Context, callbackUrl, addre
 				updateFields,
 			).Error
 			if err != nil {
-				return errs.NewError(err)
+				return nil, errs.NewError(err)
 			}
 
 			if isFirstLinked {
@@ -231,7 +239,7 @@ func (s *Service) TwitterOauthCallbackV1(ctx context.Context, callbackUrl, addre
 
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func (s *Service) AgentCreateMissionDefault(ctx context.Context, agentInfoID uint) error {
@@ -622,6 +630,196 @@ func (s *Service) TwitterOauthCallbackForCreateAgent(ctx context.Context, callba
 	return nil
 }
 
+func (s *Service) TwitterOauthCallbackForClaimVideoReward(ctx context.Context, callbackUrl, address, code, clientID string) (map[string]string, error) {
+	mapResp := map[string]string{}
+	oauthClientId := s.conf.Twitter.OauthClientId
+	oauthClientSecret := s.conf.Twitter.OauthClientSecret
+
+	respOauth, err := s.twitterAPI.GetTwitterOAuthTokenWithKeyForVideoReward(
+		oauthClientId, oauthClientSecret,
+		code, callbackUrl, address)
+	if err != nil {
+		return nil, errs.NewError(err)
+	}
+
+	if respOauth != nil && respOauth.AccessToken != "" {
+		twitterUser, err := s.twitterAPI.GetTwitterMe(respOauth.AccessToken)
+		if err != nil {
+			return nil, errs.NewError(err)
+		}
+
+		if twitterUser != nil {
+			twitterInfo, err := s.dao.FirstTwitterInfo(daos.GetDBMainCtx(ctx),
+				map[string][]interface{}{
+					"twitter_id = ?": {twitterUser.ID},
+				},
+				map[string][]interface{}{}, false,
+			)
+			if err != nil {
+				return nil, errs.NewError(err)
+			}
+
+			if twitterInfo == nil {
+				twitterInfo = &models.TwitterInfo{
+					TwitterID: twitterUser.ID,
+				}
+			}
+			twitterInfo.TwitterAvatar = twitterUser.ProfileImageURL
+			twitterInfo.TwitterName = twitterUser.Name
+			twitterInfo.TwitterUsername = twitterUser.UserName
+			twitterInfo.AccessToken = respOauth.AccessToken
+			twitterInfo.RefreshToken = respOauth.RefreshToken
+			twitterInfo.ExpiresIn = respOauth.ExpiresIn
+			twitterInfo.Scope = respOauth.Scope
+			twitterInfo.TokenType = respOauth.TokenType
+			twitterInfo.OauthClientId = oauthClientId
+			twitterInfo.OauthClientSecret = oauthClientSecret
+			twitterInfo.Description = twitterUser.Description
+			twitterInfo.RefreshError = "OK"
+
+			expiredAt := time.Now().Add(time.Second * time.Duration(respOauth.ExpiresIn-(60*20)))
+			twitterInfo.ExpiredAt = &expiredAt
+			err = s.dao.Save(daos.GetDBMainCtx(ctx), twitterInfo)
+			if err != nil {
+				return nil, errs.NewError(err)
+			}
+
+			//user address
+			privyWallet, err := s.dao.FirstPrivyWallet(daos.GetDBMainCtx(ctx),
+				map[string][]interface{}{
+					"twitter_id = ?": {twitterUser.ID},
+				}, map[string][]interface{}{}, []string{})
+			if err != nil {
+				return nil, errs.NewError(err)
+			}
+
+			if privyWallet == nil {
+				return nil, errs.NewError(errs.ErrRecordNotFound)
+			}
+
+			updateFields := map[string]interface{}{
+				"user_address": strings.ToLower(address),
+			}
+
+			err = daos.GetDBMainCtx(ctx).Model(privyWallet).Updates(
+				updateFields,
+			).Error
+			if err != nil {
+				return nil, errs.NewError(err)
+			}
+			mapResp["address"] = privyWallet.Address
+			mapResp["twitter_id"] = twitterUser.ID
+		}
+
+	}
+
+	return mapResp, nil
+}
+
+// func (s *Service) TwitterOauthCallbackForClaimVideoReward(ctx context.Context, callbackUrl, address, code, clientID string) error {
+// 	oauthClientId := s.conf.Twitter.OauthClientId
+// 	oauthClientSecret := s.conf.Twitter.OauthClientSecret
+
+// 	respOauth, err := s.twitterAPI.GetTwitterOAuthTokenWithKeyForVideoReward(
+// 		oauthClientId, oauthClientSecret,
+// 		code, callbackUrl, address)
+// 	if err != nil {
+// 		return errs.NewError(err)
+// 	}
+
+// 	if respOauth != nil && respOauth.AccessToken != "" {
+// 		twitterUser, err := s.twitterAPI.GetTwitterMe(respOauth.AccessToken)
+// 		if err != nil {
+// 			return errs.NewError(err)
+// 		}
+
+// 		if twitterUser != nil {
+// 			twitterInfo, err := s.dao.FirstTwitterInfo(daos.GetDBMainCtx(ctx),
+// 				map[string][]interface{}{
+// 					"twitter_id = ?": {twitterUser.ID},
+// 				},
+// 				map[string][]interface{}{}, false,
+// 			)
+// 			if err != nil {
+// 				return errs.NewError(err)
+// 			}
+
+// 			if twitterInfo == nil {
+// 				twitterInfo = &models.TwitterInfo{
+// 					TwitterID: twitterUser.ID,
+// 				}
+// 			}
+// 			twitterInfo.TwitterAvatar = twitterUser.ProfileImageURL
+// 			twitterInfo.TwitterName = twitterUser.Name
+// 			twitterInfo.TwitterUsername = twitterUser.UserName
+// 			twitterInfo.AccessToken = respOauth.AccessToken
+// 			twitterInfo.RefreshToken = respOauth.RefreshToken
+// 			twitterInfo.ExpiresIn = respOauth.ExpiresIn
+// 			twitterInfo.Scope = respOauth.Scope
+// 			twitterInfo.TokenType = respOauth.TokenType
+// 			twitterInfo.OauthClientId = oauthClientId
+// 			twitterInfo.OauthClientSecret = oauthClientSecret
+// 			twitterInfo.Description = twitterUser.Description
+// 			twitterInfo.RefreshError = "OK"
+
+// 			expiredAt := time.Now().Add(time.Second * time.Duration(respOauth.ExpiresIn-(60*20)))
+// 			twitterInfo.ExpiredAt = &expiredAt
+// 			err = s.dao.Save(daos.GetDBMainCtx(ctx), twitterInfo)
+// 			if err != nil {
+// 				return errs.NewError(err)
+// 			}
+
+// 			insts, err := s.dao.FindAgentVideo(daos.GetDBMainCtx(ctx),
+// 				map[string][]interface{}{
+// 					`owner_twitter_id = ?`: {twitterUser.ID},
+// 				},
+// 				map[string][]interface{}{},
+// 				[]string{},
+// 				0, 9999,
+// 			)
+
+// 			if err != nil {
+// 				return errs.NewError(err)
+// 			}
+
+// 			if insts != nil && len(insts) > 0 {
+// 				user, err := s.GetUser(daos.GetDBMainCtx(ctx), models.GENERTAL_NETWORK_ID, strings.ToLower(address), false)
+// 				if err != nil {
+// 					return errs.NewError(err)
+// 				}
+
+// 				if user != nil {
+// 					user.TwitterID = twitterInfo.TwitterID
+// 					user.TwitterName = twitterInfo.TwitterName
+// 					user.TwitterUsername = twitterInfo.TwitterUsername
+// 					user.TwitterAvatar = twitterInfo.TwitterAvatar
+// 					err = s.dao.Save(daos.GetDBMainCtx(ctx), user)
+// 					if err != nil {
+// 						return errs.NewError(err)
+// 					}
+// 				}
+
+// 				for _, inst := range insts {
+// 					updateFields := map[string]interface{}{
+// 						"user_address": strings.ToLower(address),
+// 					}
+
+// 					err := daos.GetDBMainCtx(ctx).Model(inst).Updates(
+// 						updateFields,
+// 					).Error
+// 					if err != nil {
+// 						return errs.NewError(err)
+// 					}
+// 				}
+// 			}
+
+// 		}
+
+// 	}
+
+// 	return nil
+// }
+
 func (s *Service) CreateUpdateUserTwitter(tx *gorm.DB, userTwitterID string) (*models.TwitterUser, error) {
 	tweetUser, err := s.dao.FirstTwitterUser(tx,
 		map[string][]interface{}{
@@ -709,7 +907,7 @@ func (s *Service) JobUpdateTwitterAccessToken(ctx context.Context) error {
 				map[string][]interface{}{},
 				[]string{
 					"updated_at asc",
-				}, 0, 20,
+				}, 0, 50,
 			)
 			if err != nil {
 				return errs.NewError(err)
@@ -1052,6 +1250,7 @@ func (s *Service) StreamRetrieveKnowledge(ctx context.Context, agentModel string
 	}()
 	idRequest := time.Now().UnixMicro()
 	retrieveQuery, errGenerateQuery, conversation := s.GenerateKnowledgeQuery(agentModel, messages)
+	_ = conversation
 	if errGenerateQuery != nil {
 		errChan <- errs.NewError(errors.New("ERROR_GENERATE_QUERY"))
 		return
@@ -1061,109 +1260,94 @@ func (s *Service) StreamRetrieveKnowledge(ctx context.Context, agentModel string
 		str := ""
 		retrieveQuery = &str
 	}
+
+	analysedResultChanel := make(chan string)
 	go func() {
-		outputChan <- &models.ChatCompletionStreamResponse{
-			Message: "Finish generating the query.",
-			Code:    http.StatusProcessing,
+		topKQuery := 20
+		if topK != nil {
+			topKQuery = *topK
 		}
+		th := 0.2
+		if threshold != nil {
+			th = *threshold
+		}
+
+		request := serializers.RetrieveKnowledgeBaseRequest{
+			Query: *retrieveQuery,
+			TopK:  topKQuery,
+			Kb: []string{
+				knowledgeBases[0].KbId,
+			},
+			Threshold: th,
+		}
+		go func() {
+			outputChan <- &models.ChatCompletionStreamResponse{
+				Message: "Start searching query in the RAG system.",
+				Code:    http.StatusProcessing,
+			}
+		}()
+		searchResponse, err := s.GetResultFromRagSearch(&request)
+		if err != nil {
+			errChan <- err
+			return
+		}
+
+		searchedResult := []string{}
+		for _, item := range searchResponse.Result {
+			searchedResult = append(searchedResult, item.Content)
+		}
+
+		go func() {
+			outputChan <- &models.ChatCompletionStreamResponse{
+				Message: "Start analyzing the search result.",
+				Code:    http.StatusProcessing,
+			}
+		}()
+		logger.Info("stream_retrieve_knowledge", "searched result", zap.Any("id_request", idRequest), zap.Any("searchedResult", searchedResult), zap.Any("input", request))
+		analysedResult, err := s.AnalyseSearchResults(agentModel, systemPrompt, *retrieveQuery, searchedResult)
+		if err != nil {
+			errChan <- err
+			return
+		}
+
+		logger.Info("stream_retrieve_knowledge", "analyze result", zap.Any("id_request", idRequest), zap.Any("query", retrieveQuery), zap.Any("analyzed Result", analysedResult))
+		analysedResultChanel <- analysedResult
 	}()
-
-	topKQuery := 20
-	if topK != nil {
-		topKQuery = *topK
-	}
-	th := 0.2
-	if threshold != nil {
-		th = *threshold
-	}
-
-	request := serializers.RetrieveKnowledgeBaseRequest{
-		Query: *retrieveQuery,
-		TopK:  topKQuery,
-		Kb: []string{
-			knowledgeBases[0].KbId,
-		},
-		Threshold: th,
-	}
-	go func() {
-		outputChan <- &models.ChatCompletionStreamResponse{
-			Message: "Start searching query in the RAG system.",
-			Code:    http.StatusProcessing,
+	toolCallData := ""
+	if knowledgeBases[0].ID == 211 { //eth denver agent
+		var err error
+		toolCallData, err = s.GetResultFromToolCall(*retrieveQuery)
+		if err != nil {
+			errChan <- err
+			return
 		}
-	}()
-	// retry
-	var (
-		body string
-		err  error
-	)
-	maxRetry := 10
-	for i := 1; i <= maxRetry; i++ {
-		body, err = helpers.CurlURLString(
-			s.conf.KnowledgeBaseConfig.QueryServiceUrl,
-			"POST",
-			map[string]string{},
-			&request,
-		)
-		if err == nil {
-			break
-		}
-		time.Sleep(time.Second)
 	}
-
-	response := &serializers.RetrieveKnowledgeBaseResponse{}
-	err = json.Unmarshal([]byte(body), response)
-	if err != nil {
-		errChan <- err
-		return
-	}
-
-	searchedResult := []string{}
-	for _, item := range response.Result {
-		searchedResult = append(searchedResult, item.Content)
-	}
-
-	go func() {
-		outputChan <- &models.ChatCompletionStreamResponse{
-			Message: "Finish the search query in the RAG system.",
-			Code:    http.StatusProcessing,
-		}
-	}()
-
-	go func() {
-		outputChan <- &models.ChatCompletionStreamResponse{
-			Message: "Start analyzing the search result.",
-			Code:    http.StatusProcessing,
-		}
-	}()
-	logger.Info("stream_retrieve_knowledge", "searched result", zap.Any("id_request", idRequest), zap.Any("searchedResult", searchedResult), zap.Any("input", request))
-
-	analysedResult, err := s.AnalyseSearchResults(agentModel, systemPrompt, *retrieveQuery, searchedResult)
-	if err != nil {
-		errChan <- err
-		return
-	}
-
-	go func() {
-		outputChan <- &models.ChatCompletionStreamResponse{
-			Message: "Finish analyzing the search result.",
-			Code:    http.StatusProcessing,
-		}
-	}()
-	logger.Info("stream_retrieve_knowledge", "analyze result", zap.Any("id_request", idRequest), zap.Any("query", retrieveQuery), zap.Any("analyzed Result", analysedResult))
+	logger.Info("stream_retrieve_knowledge", "tool call data", zap.Any("id_request", idRequest), zap.Any("query", retrieveQuery), zap.Any("tool call data", toolCallData))
+	// wait finish get analysedResult
+	analysedResult := <-analysedResultChanel
 	options := map[string]interface{}{}
-	userPrompt := fmt.Sprintf("Generate a response to the user's query based strictly on the conversation history and the provided information.\n\n### Guidelines:\n- The response must be concise and directly relevant.\n- Do not introduce any external knowledge.\n- Ensure clarity and alignment with ETHDenver-related context.\n- Prefer structured lists over paragraphs whenever possible to enhance readability.\n- If the response involves listing events or presentations, ensure they are formatted as follows:\n\nRequired Format for Events/Presentations:\n<Speaker 1>, <Speaker 2>, ..., <Speaker n> (<Event/Presentation name>) - <Local start time> - <Stage/Location name>\n\n- Speakers should be listed in the order provided. If they have an affiliation, include it exactly as given.\n- The event or presentation name should be placed in parentheses immediately after the speakers.\n- The local start time must be preserved in its original format.\n- The stage or location name should appear at the end.\n- If only one speaker is listed, follow the same format without modification.\n- If multiple events or presentations are listed, each should follow the format on a new line.\n\nExample of correct event/presentation output:\n- Alice, Bob (Future of ETH) - February 23, 2025 at 9:00 AM - Wheat Ridge, Colorado  \n- Jonathan Mevs - Quantstamp, Michael Boyle - Quantstamp (Easy-to-Miss Solidity Bugs) - February 24, 2025 at 10:50 AM - Captain Ethereum Stage  \n\n### Conversation History:\n%v\n\n### Relevant Information from the Website:\n%v\n\n### Final Answer:\n(Provide a precise, ETHDenver-relevant response following these guidelines.)\n\"\"\"\n\nAGENT_QUERY_GENERATION_PROMPT = \"\"\"Based on the conversation below, generate a precise query that can be used to retrieve relevant information.\n\n### Instruction:\n- Generate a precise query based on the user's question and the available context.\n- Output the query in **stringified JSON format** with a key `\"query\"`.\n- Do not include additional explanations or comments—just the JSON.\n\nExample:\n\n**Conversation:**  \nuser: What is French cuisine?\nassistant: French cuisine refers to the traditional cooking styles of France, famous for its rich flavors and varied dishes.\nuser: What is the most popular?\n\n**Output:**  \n```json\n{{\n    \"query\": \"popular French cuisine\"\n}}\n```\n\nHere is the conversation:   \n\n%v\n\nAnswer:",
-		conversation, analysedResult, conversation)
 	//answer prompt
+	question := openai.GetQuestionFromLLMMessage(messages)
 	payloadAgentChat := []openai2.ChatCompletionMessage{
 		{
 			Role:    openai2.ChatMessageRoleSystem,
 			Content: systemPrompt,
-		},
-		{
-			Role:    openai2.ChatMessageRoleUser,
-			Content: userPrompt,
-		},
+		}}
+
+	if len(messages) > 0 {
+		payloadAgentChat = messages[:len(messages)-1]
 	}
+	questionPrompt := fmt.Sprintf("Generate a response to the user's query based strictly on the user question and the provided information.\n\n### Guidelines:\n- Prioritize database data over website data when answering.\n- The response must be concise and directly relevant.\n- No external knowledge should be introduced beyond the provided sources.\n- Ensure clarity and alignment with ETHDenver-related context.\n- Prefer structured lists over paragraphs whenever possible to enhance readability.\n- If the response involves listing events, ensure they are formatted as follows:\n\nRequired Format for Events:\n```\n<Event name> (<Speaker 1>; <Speaker 2>; ...; <Speaker n>) - <Local start time> - <Stage/Location name>\n```\n\n- Speakers should be listed in the order provided. If they have an affiliation, include it exactly as given.\n- The local start time must be preserved in its original format.\n- The stage or location name should appear at the end.\n- If only one speaker is listed, follow the same format without modification.\n- If no speaker is listed, ignore the speaker listing part of the format.\n- If multiple events are listed, each should follow the format on a new line.\n\nExample of correct event with speakers output:\n- Easy-to-Miss Solidity Bugs (Jonathan Mevs - Quantstamp; Michael Boyle - Quantstamp) - February 24, 2025 at 10:50 AM - Captain Ethereum Stage\n\nExample of correct event without speakers output:\n- Messari - Feb 27, 2025 at 1:30 PM - BUIDL Event Hall\n\n### User Question:\n%v\n\n### Relevant Information from Database (Primary Source):\n%v\n\n### Relevant Information from the Website:\n%v\n\n### Final Answer:\n(Provide a precise, ETHDenver-relevant response following these guidelines.)\n",
+		question, toolCallData, analysedResult)
+	if knowledgeBases[0].ID != 211 { // not is eth denver agent
+		questionPrompt = fmt.Sprintf("Use the following context from the conversation to answer the question. If the context is insufficient, you may draw from external knowledge to provide a relevant answer.\n\nContext: \n%v\n\nQuestion: \n%v\n\nAnswer:",
+			analysedResult, question)
+	}
+
+	payloadAgentChat = append(payloadAgentChat, openai2.ChatCompletionMessage{
+		Role:    openai2.ChatMessageRoleUser,
+		Content: questionPrompt,
+	})
 
 	url := s.conf.AgentOffchainChatUrl
 	apiKey := s.conf.KnowledgeBaseConfig.OnchainAPIKey
@@ -1214,8 +1398,23 @@ func (s *Service) GenerateKnowledgeQuery(baseModel string, histories []openai2.C
 	if systemPrompt == "" {
 		systemPrompt = "You are a helpfully assistant"
 	}
-	generateQueryPrefix := "Based on the conversation below, generate a precise query that can be used to retrieve relevant information.\n\n### Instruction:\n- Generate a precise query based on the user's question and the available context.\n- Output the query in **stringified JSON format** with a key `\"query\"`.\n- Do not include additional explanations or comments—just the JSON.\n\nExample:\n\n**Conversation:**  \nuser: What is French cuisine?\nassistant: French cuisine refers to the traditional cooking styles of France, famous for its rich flavors and varied dishes.\nuser: What is the most popular?\n\n**Output:**  \n```json\n{\n    \"query\": \"popular French cuisine\"\n}\n```\n\nHere is the conversation:   \n\n%v\n\nAnswer:"
-	userPrompt := fmt.Sprintf(generateQueryPrefix, conversation)
+	question := openai.GetQuestionFromLLMMessage(histories)
+	if question == "" {
+		question = "Hi"
+	}
+	type historyMsg struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	}
+	historiesPrompt := []historyMsg{}
+	for i := 1; i < len(histories)-1; i++ {
+		historiesPrompt = append(historiesPrompt, historyMsg{
+			Role:    strings.ToLower(histories[i].Role),
+			Content: histories[i].Content,
+		})
+	}
+	generateQueryPrefix := "Based on the conversation history and the user question below, generate a concise query that can be used to retrieve relevant information.\n\n### Instruction:\n- Generate a concise query based on the conversation history and the user question.\n- Output the query in **stringified JSON format** with a key `\"query\"`.\n- Do not include additional explanations or comments—just the JSON.\n\n### Example\n\n**Conversation History:**\n[{{\"role\":\"user\",\"content\":\"What is French cuisine?\"}},{{\"role\":\"assistant\",\"content\":\"French cuisine refers to the traditional cooking styles of France, famous for its rich flavors and varied dishes.\"}}]\n\n**User Question:**\nWhat is the most popular?\n\n**Output:**  \n```json\n{{\n    \"query\": \"popular French cuisine\"\n}}\n```\n\n### Input\n\nRemember that today is: %v\n\n**Conversation History:**\n%v\n\n**User Question:**\n%v\n\n### Answer\n"
+	userPrompt := fmt.Sprintf(generateQueryPrefix, today, historiesPrompt, question)
 	messages := []openai2.ChatCompletionMessage{
 		{
 			Role:    openai2.ChatMessageRoleSystem,
@@ -1270,61 +1469,127 @@ func (s *Service) AnalyseSearchResults(baseModel string, systemPrompt string, qu
 	batchSize := 5
 	start := 0
 	analyzeResult := ""
-	for {
-		end := start + batchSize
-		if start >= len(searchedResult) {
-			break
-		}
-		if end >= len(searchedResult) {
-			end = len(searchedResult)
-		}
-		searchResult := ""
-		for _, item := range searchedResult[start:end] {
-			searchResult = searchResult + item + "\n\n"
-		}
-		url := s.conf.AgentOffchainChatUrl
-		if s.conf.KnowledgeBaseConfig.DirectServiceUrl != "" {
-			url = s.conf.KnowledgeBaseConfig.DirectServiceUrl
-		}
-
-		generateQueryPrefix := "Act as a critical information analyst, skilled in extracting only the most essential insights from search results.\n\n## Task:\nAnalyze the provided search results and extract only the most critical insights directly relevant to the given question.\n\n## Instructions:\n- Strictly extract only essential information. No introductions, summaries, or extra context—only the key insights.\n- Ensure accuracy. Verify time, location, and context before including any insight.\n- Be concise and precise. Remove redundant details, filler content, and tangential information.\n- No assumptions or external knowledge. Only use information explicitly stated in the search results.\n- Maintain neutrality and clarity. Present insights objectively without speculation.\n\n## Input:\nQuestion: %v\nSearch Results: %v\n\n## Response Format (Strictly Follow This):\n- Directly list the critical insights only—no introductions or explanations.\n- If multiple key insights exist, format them as bullet points.\n- Each point should be as concise as possible while preserving meaning.\n\n## Example Output:\n- [Critical insight 1]\n- [Critical insight 2]\n- [Critical insight 3]\n"
-		userPrompt := fmt.Sprintf(generateQueryPrefix, query, searchResult)
-		messages := []openai2.ChatCompletionMessage{
-			{
-				Role:    openai2.ChatMessageRoleSystem,
-				Content: systemPrompt,
-			},
-			{
-				Role:    openai2.ChatMessageRoleUser,
-				Content: userPrompt,
-			},
-		}
-
-		maxRetry := 10
-		messageCallLLM, _ := json.Marshal(&messages)
-		stringResp := ""
-		var err error
-		for i := 1; i <= maxRetry; i++ {
-			if i > 1 {
-				time.Sleep(time.Second)
+	countRequest := len(searchedResult) / batchSize
+	if len(searchedResult)%batchSize != 0 {
+		countRequest++
+	}
+	listAnalyzeResult := make([]string, countRequest)
+	wg := sync.WaitGroup{}
+	wg.Add(countRequest)
+	for i := 0; i < countRequest; i++ {
+		go func(index int) {
+			defer wg.Done()
+			start = index * batchSize
+			end := start + batchSize
+			if end > len(searchedResult) {
+				end = len(searchedResult)
+			}
+			searchResult := ""
+			for _, item := range searchedResult[start:end] {
+				searchResult = searchResult + item + "\n\n"
+			}
+			url := s.conf.AgentOffchainChatUrl
+			if s.conf.KnowledgeBaseConfig.DirectServiceUrl != "" {
+				url = s.conf.KnowledgeBaseConfig.DirectServiceUrl
 			}
 
-			stringResp, err = s.openais["Agent"].CallDirectlyEternalLLM(string(messageCallLLM), baseModel, url, map[string]interface{}{
-				"temperature": 0.7,
-				"max_tokens":  4096,
-			})
-			if err != nil || stringResp == "" {
-				continue
+			generateQueryPrefix := "Act as a critical information analyst, skilled in extracting only the most essential insights from search results.\n\n## Task:\nAnalyze the provided search results and extract only the most critical insights directly relevant to the given question.\n\n## Instructions:\n- Strictly extract only essential information. No introductions, summaries, or extra context—only the key insights.\n- Ensure accuracy. Verify time, location, and context before including any insight.\n- Be concise and precise. Remove redundant details, filler content, and tangential information.\n- No assumptions or external knowledge. Only use information explicitly stated in the search results.\n- Maintain neutrality and clarity. Present insights objectively without speculation.\n\n## Input:\nQuestion: %v\nSearch Results: %v\n\n## Response Format (Strictly Follow This):\n- Directly list the critical insights only—no introductions or explanations.\n- If multiple key insights exist, format them as bullet points.\n- Each point should be as concise as possible while preserving meaning.\n\n## Example Output:\n- [Critical insight 1]\n- [Critical insight 2]\n- [Critical insight 3]\n"
+			userPrompt := fmt.Sprintf(generateQueryPrefix, query, searchResult)
+			messages := []openai2.ChatCompletionMessage{
+				{
+					Role:    openai2.ChatMessageRoleSystem,
+					Content: systemPrompt,
+				},
+				{
+					Role:    openai2.ChatMessageRoleUser,
+					Content: userPrompt,
+				},
 			}
-			break
-		}
-		if len(stringResp) == 0 {
-			return "", fmt.Errorf("error when try get analyze search result")
-		}
-		analyzeResult = analyzeResult + stringResp + "\n"
-		start = end
+
+			maxRetry := 10
+			messageCallLLM, _ := json.Marshal(&messages)
+			stringResp := ""
+			var err error
+			for i := 1; i <= maxRetry; i++ {
+				if i > 1 {
+					time.Sleep(time.Second)
+				}
+
+				stringResp, err = s.openais["Agent"].CallDirectlyEternalLLM(string(messageCallLLM), baseModel, url, map[string]interface{}{
+					"temperature": 0.7,
+					"max_tokens":  4096,
+				})
+				if err != nil || stringResp == "" {
+					continue
+				}
+				break
+			}
+			listAnalyzeResult[index] = stringResp
+		}(i)
+	}
+	wg.Wait()
+	for _, result := range listAnalyzeResult {
+		analyzeResult = analyzeResult + result + "\n"
 	}
 	return analyzeResult, nil
+}
+
+func (s *Service) GetResultFromToolCall(query string) (string, error) {
+	if len(query) == 0 {
+		return "", nil
+	}
+	url := fmt.Sprintf("%v?question=%v", s.conf.KnowledgeBaseConfig.ToolCallServiceUrl, query)
+	for i := 0; i < 10; i++ {
+		body, err := helpers.CurlURLString(
+			url,
+			"GET",
+			map[string]string{},
+			nil,
+		)
+		if err != nil {
+			continue
+		}
+		res := make(map[string]interface{})
+		err = json.Unmarshal([]byte(body), &res)
+		if err != nil {
+			return "[]", nil
+		}
+		if res["result"] == nil {
+			return "[]", nil
+		}
+		result, ok := res["result"].(map[string]interface{})
+		if !ok {
+			return "[]", nil
+		}
+		data, _ := json.Marshal(result["data"])
+		return string(data), nil
+	}
+	return "", fmt.Errorf("can not get tool call result with query %v", query)
+}
+
+func (s *Service) GetResultFromRagSearch(request *serializers.RetrieveKnowledgeBaseRequest) (*serializers.RetrieveKnowledgeBaseResponse, error) {
+	if request == nil {
+		return nil, fmt.Errorf("empty query")
+	}
+
+	for i := 1; i <= 10; i++ {
+		body, err := helpers.CurlURLString(
+			s.conf.KnowledgeBaseConfig.QueryServiceUrl,
+			"POST",
+			map[string]string{},
+			&request,
+		)
+		if err != nil {
+			continue
+		}
+		var response serializers.RetrieveKnowledgeBaseResponse
+		err = json.Unmarshal([]byte(body), &response)
+		if err != nil {
+			break
+		}
+		return &response, nil
+	}
+	return nil, fmt.Errorf("can not get search result with request %v", request)
 }
 
 func (s *Service) PreviewAgentSystemPrompV1(ctx context.Context,
@@ -1431,6 +1696,7 @@ func (s *Service) PreviewStreamAgentSystemPromptV1(ctx context.Context, writerRe
 				return
 			}
 			writerResponse.Flush()
+			logger.Error("stream_retrieve_knowledge", "return with err", zap.Any("err", err))
 			return
 		case output := <-outputChan:
 			if output.Code != http.StatusProcessing {
@@ -2181,4 +2447,23 @@ func (s *Service) GetAgentInfoInstall(ctx context.Context, code string) (*models
 		return nil, errs.NewError(err)
 	}
 	return res, nil
+}
+
+func (s *Service) CheckNameExist(ctx context.Context, networkID uint64, name string) (bool, error) {
+	obj, err := s.dao.FirstAgentInfo(
+		daos.GetDBMainCtx(ctx),
+		map[string][]interface{}{
+			"network_id = ?": {networkID},
+			"agent_name = ?": {name},
+		},
+		map[string][]interface{}{},
+		[]string{},
+	)
+	if err != nil {
+		return false, errs.NewError(err)
+	}
+	if obj != nil {
+		return true, nil
+	}
+	return false, nil
 }

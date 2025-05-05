@@ -23,42 +23,77 @@ Eternal AI agents operate on a powerful peer-to-peer global infrastructure with 
 
 ## Installation
 
-Run the following command to start the whole system.
+Run the following command to start the whole system with your local network.
 ```
 sudo bash quickstart.sh
 ```
 
-Install the `eai` CLI tool to interact with your local system.
+## `eai` CLI
 
-```bash
-sudo ./install.sh
+Navigate to `./agent-cli` to install and use <b>eai CLI</b>.
+
+Run the command to install:
+
+```
+sh install.sh
 ```
 
-## `eai` CLI
+Copy `.env.example` to `.env` and update the `.env` file:
+
+```
+cp .env.example .env
+```
+
+```
+PRIVATE_KEY=
+ETERNALAI_API_KEY=
+```
+For the PRIVATE_KEY, make sure your account has enough gas tokens on the blockchains where you intend to create agents.
+
+For the ETERNALAI_API_KEY, you can get it [here](https://eternalai.org/api).
+
 
 ### Create an agent 
 
 ```bash
-eai agent create $(pwd)/decentralized-agents/characters/donald_trump.txt
+eai agent create 
+    -p <system_prompt_file_path> 
+    -n <agent_name> -c <chain_name> -f <framework> -m <model_name> 
 ```
-We are creating an agent who is a Donald Trump twin. The `.txt` file is the system prompt for your agent. It will be used to set the initial behavior for your agent. You can modify the content of the prompt file to adjust your agent's personality.
+Only the param `-p` is required, and others are optional. 
+
+Example: 
+```
+eai agent create 
+    -p ../decentralized-agents/characters/donald_trump.txt 
+    -n trump-agent -c base -f eternalai -m DeepSeek-R1-Distill-Llama-70B
+```
 
 
-### Fetch agent info by agent id
-```
-eai agent info <agent_id>
-```
+We are creating an agent who is a Donald Trump twin called `trump-agent` on the Base Chain. It uses the EternalAI framework and the DeepSeek-R1-Distill-Llama-70B model. The `.txt` file is the system prompt for your agent, which defines its initial behavior. You can edit this file to customize the agent’s personality.
 
 
 ### List out all agents on your machine
 ```bash
-eai agent list
+eai agent ls
 ```
 
+Example output: 
+<img width="2704" alt="list_all_agents" src="./media-kit/images/ls.png" />
+
+### Start an agent
+```bash
+eai agent start -n <agent_name>
+```
 
 ### Chat with an agent
 ```bash
-eai agent chat <agent_id>
+eai agent chat -n <agent_name>
+```
+
+### Stop an agent
+```bash
+eai agent stop -n <agent_name>
 ```
 
 

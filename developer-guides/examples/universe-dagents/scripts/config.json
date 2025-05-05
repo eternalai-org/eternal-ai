@@ -6,6 +6,11 @@
                 "modelName": "DeepSeek V3",
                 "modelAddress": "0xfC2875Ac6148aaf332e2991A27b4f0251807759A",
                 "description": "UniverseDagents"
+            },
+            {
+                "modelName": "wan2.1",
+                "modelAddress": "0x19aeEfFbc0244Be6187314A74a443A18AA2cCeEe",
+                "description": "UniverseDagents"
             }
         ]
     },
@@ -80,6 +85,16 @@
             {
                 "modelName": "unsloth/r1-1776-GGUF",
                 "modelAddress": "0x31c4e363d85452B85f8888c4744Ce00efcc2E0aF",
+                "description": "UniverseDagents"
+            }
+        ]
+    },
+    "megaeth_testnet": {
+        "promptSchedulerAddress": "0x51D1E39D4E83f411033F3F6E159c13C18Fae26A2",
+        "models": [
+            {
+                "modelName": "DeepSeek-R1-Distill-Llama-70B",
+                "modelAddress": "0xF5ff10edf673017A6455f7Da2994578565586Fa8",
                 "description": "UniverseDagents"
             }
         ]

@@ -202,4 +202,7 @@ cython_debug/
 
 # Ignore build binary
 eai-chat
+eai-chat-linux
 .vscode/
+
+agent-cli/agents/ 

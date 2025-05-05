@@ -1,6 +1,12 @@
 .headerContainer {
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 0px;
-  width: 1000px;
+  // align-items: center;
+  // justify-content: space-between;
+  padding: 35px 0px;
+  width: 90px;
+  height: 100vh;
+  background-color: #e9e9ee;
+
+  background: linear-gradient(180deg, #e4e5d8 0%, #cbd6e8 100%);
+  /* Color-newsystem/White/40 */
+  border-right: 1px solid #efefef;
 }

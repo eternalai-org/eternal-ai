@@ -1,0 +1,59 @@
+{
+  "name": "@eternalai.js/libraries",
+  "version": "0.1.0",
+  "license": "MIT",
+  "main": "dist/bundle.cjs.js",
+  "module": "dist/bundle.esm.js",
+  "typings": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=10"
+  },
+  "scripts": {
+    "build": "rm -rf dist && rollup -c",
+    "build:watch": "rollup -c -w",
+    "test": "vitest",
+    "lint": "eslint . --ext .ts,.tsx",
+    "size": "size-limit",
+    "analyze": "size-limit --why",
+    "build-packages": "rm -rf packages && npm run build-ethers && npm run build-uniswap-sdk-core",
+    "build-ethers": "rollup -c ./rollup.config-ethers.js",
+    "build-uniswap-sdk-core": "rollup -c ./rollup.config-uniswap-sdk-core.js"
+  },
+  "peerDependencies": {},
+  "husky": {
+    "hooks": {
+      "pre-commit": "eslint . --ext .ts,.tsx"
+    }
+  },
+  "prettier": {
+    "printWidth": 80,
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "author": "Peter",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^21.0.1",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^13.0.6",
+    "@rollup/plugin-typescript": "^8.3.3",
+    "@size-limit/preset-small-lib": "^11.1.6",
+    "husky": "^9.1.7",
+    "rollup": "^2.56.3",
+    "rollup-plugin-node-builtins": "^2.1.2",
+    "rollup-plugin-node-globals": "^1.4.0",
+    "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-uglify": "^6.0.4",
+    "size-limit": "^11.1.6",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@uniswap/sdk-core": "^7.6.0",
+    "ethers": "5.7.2"
+  }
+}

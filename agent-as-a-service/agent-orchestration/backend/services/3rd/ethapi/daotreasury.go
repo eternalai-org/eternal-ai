@@ -98,7 +98,7 @@ func (c *Client) DAOTreasurySettleFund(contractAddr string, prkHex string, fundB
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}
@@ -166,7 +166,7 @@ func (c *Client) DAOTreasuryAddLiquidity(contractAddr string, prkHex string, dao
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}

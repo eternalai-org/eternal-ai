@@ -1,12 +1,14 @@
 import * as ethers from 'ethers';
 import { InferPayloadWithMessages, InferPayloadWithPrompt } from './types';
 import * as methods from './methods';
-import { CHAIN_MAPPING, ChainId } from './constants';
+import { ChainId } from './constants';
+import BaseInteract, { IInteract } from './baseInteract';
 
-class Interact {
+class Interact extends BaseInteract implements IInteract {
   private _wallet: ethers.Wallet;
 
   constructor(wallet: ethers.Wallet) {
+    super();
     if (!ethers.Wallet.isSigner(wallet)) {
       throw new Error('Provided wallet is not a signer');
     }
@@ -14,65 +16,46 @@ class Interact {
     this._wallet = wallet;
   }
 
-  private getProvider(chainId: ChainId) {
-    const rpcUrl = CHAIN_MAPPING[chainId];
-    if (!rpcUrl) {
-      throw new Error(`Unsupported chainId: ${chainId}`);
-    }
-
-    return new ethers.providers.JsonRpcProvider(rpcUrl);
+  private getNetworkCredential(chainId: ChainId, rpcUrl?: string) {
+    const provider = this.getProvider(chainId, rpcUrl);
+    const signer = this._wallet.connect(provider);
+    return {
+      provider,
+      signer,
+    };
   }
 
   // Overload signatures
   // @ts-ignore
-  public async infer(payload: InferPayloadWithPrompt): Promise<any>;
+  public async infer(payload: InferPayloadWithPrompt): Promise<string | null>;
   // @ts-ignore
-  public async infer(payload: InferPayloadWithMessages): Promise<any>;
+  public async infer(payload: InferPayloadWithMessages): Promise<string | null>;
 
   // Implementation
   // @ts-ignore
-
   public async infer(
     payload: InferPayloadWithPrompt | InferPayloadWithMessages
-  ) {
-    if (typeof (payload as InferPayloadWithPrompt).prompt === 'string') {
-      return this.inferWithPrompt(payload as InferPayloadWithPrompt);
-    } else {
-      return this.inferWithMessages(payload as InferPayloadWithMessages);
-    }
-  }
-
-  private async inferWithPrompt(payload: InferPayloadWithPrompt) {
+  ): Promise<string | null> {
     try {
-      console.log('infer - start');
-      const provider = this.getProvider(payload.chainId);
-      const signer = this._wallet.connect(provider);
-
-      console.log('infer call createPayloadWithPrompt', payload);
-      const params = await methods.Infer.createPayloadWithPrompt(
-        signer,
-        payload
-      );
-
-      console.log('infer call signTransaction', params);
-      const signedTx = await signer.signTransaction(params);
-
-      console.log('infer call sendInfer', signedTx);
-      const sendPromptTxHash = await methods.Infer.sendPrompt(signer, signedTx);
-
-      console.log('infer call getWorkerHubAddress');
-      const workerHubAddress = await methods.Infer.getWorkerHubAddress(
-        payload.chainId,
-        signer
-      );
-
-      console.log('infer call listenInferResponse', sendPromptTxHash);
-      const result = await methods.Infer.listenPromptResponse(
-        payload.chainId,
-        signer
-      );
-      console.log('infer - succeed', result);
-      return result;
+      const normalizedPayload = this.normalizePayload(payload);
+      console.log('infer - start', {
+        payload: normalizedPayload,
+      });
+      if (
+        typeof (normalizedPayload as InferPayloadWithPrompt).prompt === 'string'
+      ) {
+        const result = await this.inferWithPrompt(
+          normalizedPayload as InferPayloadWithPrompt
+        );
+        console.log('infer - succeed', result);
+        return result;
+      } else {
+        const result = await this.inferWithMessages(
+          normalizedPayload as InferPayloadWithMessages
+        );
+        console.log('infer - succeed', result);
+        return result;
+      }
     } catch (e) {
       console.log('infer - failed', e);
       throw e;
@@ -81,43 +64,49 @@ class Interact {
     }
   }
 
-  private async inferWithMessages(payload: InferPayloadWithMessages) {
-    try {
-      console.log('infer - start');
-      const provider = this.getProvider(payload.chainId);
-      const signer = this._wallet.connect(provider);
+  private async inferWithPrompt(
+    payload: InferPayloadWithPrompt
+  ): Promise<string | null> {
+    console.log('inferWithPrompt - start');
+    const { signer } = this.getNetworkCredential(
+      payload.chainId,
+      payload.rpcUrl
+    );
 
-      console.log('infer call createPayloadWithMessages', payload);
-      const params = await methods.Infer.createPayloadWithMessages(
-        signer,
-        payload
-      );
+    const params = await methods.Infer.createPayloadWithPrompt(signer, payload);
 
-      console.log('infer call signTransaction', params);
-      const signedTx = await signer.signTransaction(params);
+    const signedTx = await signer.signTransaction(params);
 
-      console.log('infer call sendInfer', signedTx);
-      const sendPromptTxHash = await methods.Infer.sendPrompt(signer, signedTx);
+    return await this.sendSignedTransactionAndListenResult(
+      signer,
+      signedTx,
+      payload.agentAddress,
+      payload.chainId
+    );
+  }
 
-      console.log('infer call getWorkerHubAddress');
-      const workerHubAddress = await methods.Infer.getWorkerHubAddress(
-        payload.chainId,
-        signer
-      );
+  private async inferWithMessages(
+    payload: InferPayloadWithMessages
+  ): Promise<string | null> {
+    console.log('inferWithMessages - start');
+    const { signer } = this.getNetworkCredential(
+      payload.chainId,
+      payload.rpcUrl
+    );
 
-      console.log('infer call listenInferResponse', sendPromptTxHash);
-      const result = await methods.Infer.listenPromptResponse(
-        payload.chainId,
-        signer
-      );
-      console.log('infer - succeed', result);
-      return result;
-    } catch (e) {
-      console.log('infer - failed', e);
-      throw e;
-    } finally {
-      console.log('infer - end');
-    }
+    const params = await methods.Infer.createPayloadWithMessages(
+      signer,
+      payload
+    );
+
+    const signedTx = await signer.signTransaction(params);
+
+    return await this.sendSignedTransactionAndListenResult(
+      signer,
+      signedTx,
+      payload.agentAddress,
+      payload.chainId
+    );
   }
 }
 

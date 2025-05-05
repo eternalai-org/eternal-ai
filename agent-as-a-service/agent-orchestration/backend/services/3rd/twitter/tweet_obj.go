@@ -1,5 +1,10 @@
 package twitter
 
+import (
+	"fmt"
+	"strings"
+)
+
 // TweetField defines the fields of the basic building block of all things twitter
 type TweetField string
 
@@ -79,6 +84,27 @@ type TweetObj struct {
 	NoteTweet          struct {
 		Text string `json:"text"`
 	} `json:"note_tweet"`
+}
+
+func (tw *TweetObj) GetAllFullText() string {
+	fullText := tw.NoteTweet.Text
+	if fullText == "" {
+		fullText = tw.Text
+	}
+	return fullText
+}
+
+func (tw *TweetObj) GetFullText() string {
+	fullText := tw.NoteTweet.Text
+	if fullText == "" {
+		fullText = tw.Text
+	}
+
+	for _, item := range tw.Entities.Mentions {
+		fullText = strings.ReplaceAll(fullText, fmt.Sprintf("@%s", item.UserName), "")
+	}
+
+	return fullText
 }
 
 // TweetAttachmentsObj specifics the type of attachment present in the tweet

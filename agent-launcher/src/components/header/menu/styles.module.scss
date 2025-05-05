@@ -1,5 +1,9 @@
 .deskMenu {
+  flex-direction: column;
+  gap: 12px;
   a {
+    /* Rectangle 34624740 */
+
     text-align: center;
     font-size: 14px;
     font-style: normal;
@@ -8,6 +12,33 @@
     font-family: var(--font-inter);
     text-transform: capitalize;
     transition: opacity 0.4s var(--easeOutQuart);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    &.isActive {
+      .borderLeft {
+        &.green {
+          background: #1fc337;
+        }
+        &.blue {
+          background: #0079FE;
+        }
+      }
+    }
+
+    .borderLeft {
+      // position: absolute;
+      width: 6px;
+      height: 45px;
+      // left: 0px;
+      // top: 0;
+
+      background: transparent;
+      border-radius: 0px 4px 4px 0px;
+    }
 
     &.onBtc,
     &:hover {
@@ -57,9 +88,9 @@
       align-items: center;
       gap: 8px;
       img {
-        width: 20px;
-        height: 20px;
-        border-radius: 2px;
+        width: 60px;
+        height: 60px;
+        // border-radius: 2px;
       }
       p {
         color: #000;

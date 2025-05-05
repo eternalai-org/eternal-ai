@@ -1,0 +1,78 @@
+.container {
+  h4 {
+    color: #000;
+    font-size: 24px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 150%; /* 36px */
+  }
+
+  p {
+    color: #000;
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 150%; /* 27px */
+
+    &.health_status {
+      &__healthy {
+        color: #00AA6C;
+      }
+
+      &__unhealthy {
+        color: #FF4D4F;
+      }
+
+      &__warning {
+        color: #FF9800;
+      }
+    }
+
+    &.dot {
+      opacity: .5;
+    }
+
+    &.progress_status {
+      opacity: .5;
+    }
+
+    &.memory {
+      color: #000;
+      font-size: 16px;
+      font-style: normal;
+      font-weight: 400;
+      line-height: 140%; /* 22.4px */
+      text-transform: uppercase;
+      opacity: .7;
+    }
+  }
+
+  .node_onchain_data {
+    p {
+      color: #000;
+      font-size: 18px;
+      font-style: normal;
+      font-weight: 400;
+      line-height: 150%; /* 27px */
+    }
+
+    .right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      &_text {
+        color: #000;
+        font-size: 18px;
+        font-style: normal;
+        font-weight: 500;
+        line-height: 150%; /* 27px */
+      }
+
+      &_icon {
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+}

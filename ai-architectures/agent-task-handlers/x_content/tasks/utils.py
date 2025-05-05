@@ -49,6 +49,16 @@ async def notify_status_reasoning_log(log: ReasoningLog):
     elif log.state in [MissionChainState.ERROR, MissionChainState.DONE]:
         info = f"<i><b>Ref-ID</b>: {log.meta_data.ref_id};\n{nav}"
         system_message = log.system_message
+
+        # if log.state == MissionChainState.ERROR:
+        #     await telegram.a_send_message(
+        #         twitter_username="junk_notifications",
+        #         room=telegram.TELEGRAM_ALERT_ROOM,
+        #         schedule=True,
+        #         message_to_send=f"<b>Request</b>: {log.id}\nModel: {log.model}; Task: {log.task}; Agent: {log.meta_data.twitter_username}\nError: {system_message}",
+        #         fmt="HTML"
+        #     )
+
         msg = f"<strong>Task {log.task} using toolset {log.toolset} for {log.meta_data.twitter_username} finished with state {log.state}</strong>\nTraceback info:\n{info}\nSystem message: {system_message}"
 
     else:

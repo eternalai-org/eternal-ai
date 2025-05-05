@@ -594,7 +594,7 @@ func (s *Service) LuckyMoneyProcessUserReward(ctx context.Context, luckyID uint)
 								rAmount, _ := m.RewardAmount.Float.Float64()
 								transferReq := &blockchainutils.SolanaTransferReq{
 									Mint:      eaiAddress,
-									Amount:    uint64(rAmount * math.Pow10(decimalsMint)),
+									Amount:    rAmount * math.Pow10(decimalsMint),
 									ToAddress: m.UserAddress,
 								}
 

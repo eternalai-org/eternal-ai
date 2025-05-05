@@ -82,7 +82,7 @@ func (c *Client) MultisendERC20Transfer(contractAddr string, prkHex string, toke
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}

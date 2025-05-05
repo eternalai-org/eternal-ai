@@ -30,6 +30,7 @@ SELF_HOSTED_LLAMA_405B_URL = get_and_warn(
 SELF_HOSTED_LLAMA_URL = get_and_warn("SELF_HOSTED_LLAMA_URL", "").rstrip("/")
 
 SELF_HOSTED_LLAMA_API_KEY = get_and_warn("SELF_HOSTED_LLAMA_API_KEY")
+SELF_HOSTED_HERMES_70B_API_KEY = get_and_warn("SELF_HOSTED_HERMES_70B_API_KEY")
 
 VISION_API_KEY = get_and_warn("VISION_API_KEY")
 VISION_API_URL = get_and_warn("VISION_API_URL", "").rstrip("/")

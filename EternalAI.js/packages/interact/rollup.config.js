@@ -4,37 +4,42 @@ const typescript = require('@rollup/plugin-typescript');
 const { terser } = require('rollup-plugin-terser');
 const pkg = require('./package.json');
 
+const json = require('@rollup/plugin-json');
+const builtins = require('rollup-plugin-node-builtins');
+const globals = require('rollup-plugin-node-globals');
+const inject = require('@rollup/plugin-inject');
+
+const { uglify } = require('rollup-plugin-uglify');
+import gzipPlugin from 'rollup-plugin-gzip';
+
 module.exports = {
-  input: 'src/index.ts',
+  input: ['./src/index.ts'],
   output: [
     {
-      file: pkg.main,
+      // dir: 'dist',
       format: 'cjs',
-      sourcemap: true,
+      file: 'dist/index.cjs.js',
+      sourcemap: false,
     },
     {
-      file: pkg.module,
-      format: 'es',
-      sourcemap: true,
-    },
-    {
-      file: 'dist/bundle.iife.js',
-      format: 'iife',
-      name: 'Interact',
-      sourcemap: true,
-    },
-    {
-      file: 'dist/bundle.umd.js',
+      // dir: 'dist',
       format: 'umd',
+      file: 'dist/index.umd.js',
       name: 'Interact',
-      sourcemap: true,
+      sourcemap: false,
     },
   ],
   plugins: [
-    resolve(),
+    resolve({}),
+    inject({}),
     commonjs(),
-    typescript({ tsconfig: './build.tsconfig.json' }),
+    globals(),
+    builtins(),
+    typescript({ tsconfig: './build.tsconfig.json', declaration: false }),
     terser(),
+    json(),
+    uglify(),
+    gzipPlugin(),
   ],
-  external: Object.keys(pkg.peerDependencies || {}),
+  external: [...Object.keys(pkg.peerDependencies || {}), 'ethers'],
 };

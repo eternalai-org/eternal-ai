@@ -1,0 +1,238 @@
+[
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "agentId",
+                "type": "bytes32"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "agent",
+                "type": "address"
+            }
+        ],
+        "name": "AgentCreated",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "implementation",
+                "type": "address"
+            }
+        ],
+        "name": "ImplementationSet",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint8",
+                "name": "version",
+                "type": "uint8"
+            }
+        ],
+        "name": "Initialized",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+            }
+        ],
+        "name": "OwnershipTransferred",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "name": "agents",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "agentId",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "string",
+                "name": "agentName",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "agentVersion",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "codeLanguage",
+                "type": "string"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "retrieveAddress",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "enum IAgent.FileType",
+                        "name": "fileType",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "fileName",
+                        "type": "string"
+                    }
+                ],
+                "internalType": "struct IAgent.CodePointer[]",
+                "name": "pointers",
+                "type": "tuple[]"
+            },
+            {
+                "internalType": "address[]",
+                "name": "depsAgents",
+                "type": "address[]"
+            },
+            {
+                "internalType": "address",
+                "name": "agentOwner",
+                "type": "address"
+            }
+        ],
+        "name": "createAgent",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "agent",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getImplementation",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "implementation",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "registrar",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "resolver",
+                "type": "address"
+            }
+        ],
+        "name": "initialize",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "renounceOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "implementation",
+                "type": "address"
+            }
+        ],
+        "name": "setImplementation",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+            }
+        ],
+        "name": "transferOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
+]

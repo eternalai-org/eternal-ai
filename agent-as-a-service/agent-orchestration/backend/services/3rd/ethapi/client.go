@@ -125,12 +125,31 @@ func (c *Client) GetClient() (*ethclient.Client, error) {
 	return c.client, nil
 }
 
-func (c *Client) ChainID() uint64 {
+func (c *Client) ChainID() (uint64, error) {
 	_, err := c.GetChainID()
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
-	return c.chainID
+	return c.chainID, nil
+}
+
+func (c *Client) PendingNonceAt(ctx context.Context, addr common.Address) (uint64, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return 0, err
+	}
+	pNum, err := client.PendingNonceAt(ctx, addr)
+	if err != nil {
+		return 0, err
+	}
+	num, err := client.NonceAt(ctx, addr, nil)
+	if err != nil {
+		return 0, err
+	}
+	if pNum > num+3 {
+		return 0, errors.New("pending nonce is too high")
+	}
+	return pNum, nil
 }
 
 func (c *Client) Address() (string, string, error) {
@@ -463,7 +482,7 @@ func (c *Client) Transfer(prkHex string, toAddr string, amount string, includeFe
 	if err != nil {
 		return "", err
 	}
-	nonce, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonce, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}
@@ -526,7 +545,9 @@ func (c *Client) ValidateMessageSignature(msg string, signatureHex string, signe
 		return err
 	}
 	pbkHex := crypto.PubkeyToAddress(*sigPublicKey)
-	if !strings.EqualFold(pbkHex.Hex(), signer) {
+	pbStr := pbkHex.Hex()
+	fmt.Println(pbStr)
+	if !strings.EqualFold(pbStr, signer) {
 		return errors.New("not valid signer")
 	}
 	return nil
@@ -614,7 +635,7 @@ func (c *Client) Erc20Transfer(erc20Addr string, prkHex string, toAddr string, a
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}
@@ -761,7 +782,7 @@ func (c *Client) Erc20ApproveMax(erc20Addr string, prkHex string, toAddr string)
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}
@@ -970,7 +991,7 @@ func (c *Client) Transact(contractAddr string, prkHex string, dataBytes []byte, 
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}
@@ -1079,4 +1100,20 @@ func (c *Client) ConvertAddressForOut(addr string) string {
 		return trxapi.AddrEvmToTron(addr)
 	}
 	return addr
+}
+
+func (c *Client) GetSignatureTimestamp(prk string, timestamp int64) (string, error) {
+	datas := []byte{}
+	datas = append(datas, common.BytesToHash(big.NewInt(int64(timestamp)).Bytes()).Bytes()...)
+
+	dataByteHash := crypto.Keccak256Hash(
+		datas,
+	)
+
+	signature, err := c.SignWithEthereum(prk, dataByteHash.Bytes())
+	if err != nil {
+		return "", err
+	}
+
+	return signature, nil
 }

@@ -1,0 +1,46 @@
+.DS_Store
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.log
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+.env
+.vscode
+node_modules
+dist
+
+configs/firebase_service_account.json
+configs/google_storage.json
+configs/pubsub.json
+configs/config.json
+configs/config.json_
+config/config.json
+vendor*
+tmp/*
+test_*
+.vendor*
+.tmp/*
+.test_*
+.idea
+.vscode
+Gopkg.lock
+Gopkg.toml
+merge.sh
+merge_*.sh
+logs
+log.log
+__debug_bin
+node_modules
+.env
+dist
+build
+Makefile
+api.http

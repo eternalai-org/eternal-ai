@@ -1,0 +1,27 @@
+.card {
+  overflow: hidden;
+
+  &_header {
+    padding: 16px 24px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: flex-start;
+    background: #FAFAFA;
+    border-top-left-radius: var(--inner-border-radius);
+    border-top-right-radius: var(--inner-border-radius);
+
+    &_name {
+      color: #000;
+      text-align: center;
+      font-size: 18px;
+      font-style: normal;
+      font-weight: 500;
+      line-height: normal;
+    }
+  }
+
+  &_content {
+    padding: 0 24px 24px;
+    background: #fff;
+  }
+}

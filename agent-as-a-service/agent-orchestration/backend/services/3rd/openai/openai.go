@@ -23,6 +23,7 @@ type OpenAI struct {
 	BaseURL         string
 	ApiKey          string
 	AutoAgentApiUrl string
+	ModelName       string
 }
 
 type ChatResponse struct {
@@ -45,10 +46,11 @@ type ChatResponse struct {
 	} `json:"usage"`
 }
 
-func NewOpenAI(baseUrl, apiKey string) *OpenAI {
+func NewOpenAI(baseUrl, apiKey string, modelName string) *OpenAI {
 	return &OpenAI{
-		BaseURL: baseUrl,
-		ApiKey:  apiKey,
+		BaseURL:   baseUrl,
+		ApiKey:    apiKey,
+		ModelName: modelName,
 	}
 }
 
@@ -62,7 +64,7 @@ func (c OpenAI) ChatMessage(msgChat string) (string, error) {
 	seed := models.RandSeed()
 	path := fmt.Sprintf("%s/v1/chat/completions", c.BaseURL)
 	bodyReq := map[string]interface{}{
-		"model":  "NousResearch/Hermes-3-Llama-3.1-70B-FP8",
+		"model":  c.ModelName,
 		"stream": false,
 		"seed":   seed,
 	}
@@ -136,7 +138,7 @@ func (c OpenAI) ChatMessageWithSystemPromp(msgChat, systemContent string) (strin
 	seed := models.RandSeed()
 	path := fmt.Sprintf("%s/v1/chat/completions", c.BaseURL)
 	bodyReq := map[string]interface{}{
-		"model":  "NousResearch/Hermes-3-Llama-3.1-70B-FP8",
+		"model":  c.ModelName,
 		"stream": false,
 		"seed":   seed,
 	}
@@ -232,6 +234,70 @@ func (c OpenAI) TestAgentPersinality(systemPrompt, userPrompt, baseUrl string) (
 	return chatResp, nil
 }
 
+func (c OpenAI) CallDirectlyEternalLLMV2(input map[string]interface{}, baseUrl string) (string, error) {
+	chatResp := ""
+	bodyBytes, _ := json.Marshal(input)
+	req, err := http.NewRequest("POST", baseUrl, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return chatResp, err
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.ApiKey))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return chatResp, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return chatResp, err
+	}
+
+	m := ChatResponse{}
+	err = json.Unmarshal(body, &m)
+	if err != nil {
+		return chatResp, err
+	}
+	if m.Choices != nil && len(m.Choices) > 0 {
+		data := m.Choices[0]
+		if data.Message != nil && data.Message.Content != "" {
+			chatResp = data.Message.Content
+		}
+	}
+
+	return chatResp, nil
+}
+
+func (c OpenAI) CallEternalLLMOnchain(input map[string]interface{}, baseUrl string) (map[string]interface{}, error) {
+
+	bodyBytes, _ := json.Marshal(input)
+	req, err := http.NewRequest("POST", baseUrl, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.ApiKey))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	m := map[string]interface{}{}
+	err = json.Unmarshal(body, &m)
+	return m, err
+}
+
 func (c OpenAI) CallDirectlyEternalLLM(messages, model, baseUrl string, options map[string]interface{}) (string, error) {
 	seed := models.RandSeed()
 	bodyReq := map[string]interface{}{
@@ -303,6 +369,9 @@ func (c OpenAI) CallStreamDirectlyEternalLLM(ctx context.Context, messages, mode
 	if value, ok := options["max_tokens"]; ok {
 		llmRequest.MaxTokens, _ = value.(int)
 	}
+	if value, ok := options["temperature"]; ok {
+		llmRequest.Temperature, _ = value.(float32)
+	}
 	stream, err := client.CreateChatCompletionStream(
 		ctx,
 		llmRequest,
@@ -327,6 +396,62 @@ func (c OpenAI) CallStreamDirectlyEternalLLM(ctx context.Context, messages, mode
 		outputChan <- &response
 	}
 	return
+}
+
+func (c OpenAI) CallStreamDirectlyEternalLLMV2(ctx context.Context, messages []openai.ChatCompletionMessage, model, baseUrl string, options map[string]interface{}) (string, error) {
+	seed := rand.Int()
+	config := openai.DefaultConfig("")
+	baseUrl = strings.Replace(baseUrl, "/chat/completions", "", 1)
+	config.BaseURL = baseUrl
+	client := openai.NewClientWithConfig(config)
+	llmRequest := openai.ChatCompletionRequest{
+		Model:    model,
+		Stream:   true,
+		Seed:     &seed,
+		Messages: messages,
+	}
+	if value, ok := options["top_p"]; ok {
+		llmRequest.TopP, _ = value.(float32)
+	}
+	if value, ok := options["max_tokens"]; ok {
+		llmRequest.MaxTokens, _ = value.(int)
+	}
+	if value, ok := options["temperature"]; ok {
+		llmRequest.Temperature, _ = value.(float32)
+	}
+	stream, err := client.CreateChatCompletionStream(
+		ctx,
+		llmRequest,
+	)
+	if err != nil {
+		return "", err
+	}
+	defer stream.Close()
+	thinking := false
+	output := ""
+	for {
+		body, err := stream.RecvRaw()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		var res models.ChatCompletionStreamResponse
+		err = json.Unmarshal(body, &res)
+		if err != nil {
+			return "", fmt.Errorf("error when receive data from ai server: %v", err)
+		}
+		if res.Choices[0].Delta.Content != "" {
+			if strings.Contains(res.Choices[0].Delta.Content, "<think>") {
+				thinking = true
+			} else if strings.Contains(res.Choices[0].Delta.Content, "</think>") {
+				thinking = false
+				continue
+			}
+			if !thinking {
+				output += res.Choices[0].Delta.Content
+			}
+		}
+	}
+	return output, nil
 }
 
 func (c OpenAI) CallStreamOnchainEternalLLM(ctx context.Context, baseUrl string, apiKey string, llmRequest openai.ChatCompletionRequest, outputChan chan *models.ChatCompletionStreamResponse, errChan chan error, doneChan chan bool) {
@@ -473,9 +598,13 @@ type AgentThinking struct {
 
 func (c OpenAI) AgentChats(systemPrompt, baseUrl string, messages serializers.AgentChatMessageReq) (*ChatResponse, error) {
 	m := ChatResponse{}
+	modelName := c.ModelName
+	if modelName == "" {
+		modelName = "NousResearch/Hermes-3-Llama-3.1-70B-FP8"
+	}
 	seed := models.RandSeed()
 	bodyReq := map[string]interface{}{
-		"model":  "NousResearch/Hermes-3-Llama-3.1-70B-FP8",
+		"model":  modelName,
 		"stream": false,
 		"seed":   seed,
 	}

@@ -9,6 +9,7 @@ import (
 	"net/url"
 
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/errs"
+	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/helpers"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/models"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/serializers"
 	"github.com/gin-gonic/gin"
@@ -55,11 +56,19 @@ func (s *Server) TwitterOauthCallback(c *gin.Context) {
 	agentID := s.stringFromContextQuery(c, "agent_id")
 	clientID := s.stringFromContextQuery(c, "client_id")
 
-	err := s.nls.TwitterOauthCallbackV1(ctx, callbackUrl, address, code, agentID, clientID)
+	mapResp, err := s.nls.TwitterOauthCallbackV1(ctx, callbackUrl, address, code, agentID, clientID)
 	if err != nil {
 		ctxAbortWithStatusJSON(c, http.StatusBadRequest, &serializers.Resp{Error: errs.NewError(err)})
 		return
 	}
+
+	if mapResp != nil {
+		callbackUrl = helpers.BuildUri(
+			callbackUrl,
+			mapResp,
+		)
+	}
+
 	location := url.URL{Path: callbackUrl}
 	c.Redirect(http.StatusFound, location.RequestURI())
 }
@@ -163,4 +172,20 @@ func (s *Server) GetListBubbleCrypto(c *gin.Context) {
 		result = result[:100]
 	}
 	ctxJSON(c, http.StatusOK, &serializers.Resp{Result: result})
+}
+
+func (s *Server) MemeEventsByTransaction(c *gin.Context) {
+	ctx := s.requestContext(c)
+	txHash := s.stringFromContextQuery(c, "tx_hash")
+	networkID, err := s.uint64FromContextQuery(c, "network_id")
+	if err != nil {
+		ctxAbortWithStatusJSON(c, http.StatusBadRequest, &serializers.Resp{Error: errs.NewError(err)})
+		return
+	}
+	err = s.nls.MemeEventsByTransaction(ctx, networkID, txHash)
+	if err != nil {
+		ctxAbortWithStatusJSON(c, http.StatusBadRequest, &serializers.Resp{Error: errs.NewError(err)})
+		return
+	}
+	ctxJSON(c, http.StatusOK, &serializers.Resp{Result: true})
 }

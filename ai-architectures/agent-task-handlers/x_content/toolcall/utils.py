@@ -11,7 +11,7 @@ import httpx
 import json
 from x_content import wrappers
 from x_content.wrappers.magic import sync2async
-import asyncio
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 LIMIT_TOTAL_TOKENS_PER_OBSERVATION = 700 * 3
@@ -43,6 +43,24 @@ def make_response(content, success=True):
         "content": content,
     }
 
+def shorten_data(data: Union[dict, list, str], max_size_list: int = 10, max_size_str: int = 2048) -> dict | list:
+    if isinstance(data, dict):
+        data = {
+            k: shorten_data(v, max_size_list, max_size_str)
+            for k, v in data.items()
+        }
+
+    elif isinstance(data, list):
+        data = data[:max_size_list]
+        data = [
+            shorten_data(item, max_size_list, max_size_str)
+            for item in data
+        ]
+        
+    elif isinstance(data, str):
+        data = data[:max_size_str]
+
+    return data
 
 async def execute_http_toolcall(
     method: str, 
@@ -50,16 +68,34 @@ async def execute_http_toolcall(
     params: dict, 
     headers: dict=None
 ):
+    parted_url = urlparse(endpoint)
+    url = '{}://{}{}'.format(parted_url.scheme, parted_url.netloc, parted_url.path)
+
     payload = dict(
         method=method,
-        url=endpoint,
+        url=url,
+        params={}        
     )
+    
+    splited_query = [
+        e.split('=') 
+        for e in parted_url.query.split('&')
+    ]
+
+    splited_query = [
+        e
+        for e in splited_query 
+        if len(e) == 2
+    ]
+
+    for k, v in splited_query:
+        payload["params"][k] = v
 
     if headers is not None:
         payload["headers"] = headers
 
     if method == "GET":
-        payload["params"] = params
+        payload["params"].update(params)
     else:
         payload["json"] = params
 
@@ -107,7 +143,7 @@ async def execute_http_toolcall(
     except json.JSONDecodeError:
         resp_to_agent = resp.text
 
-    return make_response(resp_to_agent, True)
+    return make_response(shorten_data(resp_to_agent), True)
 
 
 def value_cast(dtype: ToolParamDtype, value: str):

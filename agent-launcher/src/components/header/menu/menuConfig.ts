@@ -9,6 +9,7 @@ export interface NavItem {
   href?: string;
   isHide?: boolean;
   isTwitter?: boolean;
+  className?: string;
   subMenu?: {
     label: string;
     href: string;
@@ -24,35 +25,45 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: Array<NavItem> = [
-  {
-    label: 'Products',
-    href: '',
-    isNewWindow: false,
-    isHide: false,
-    isDropdown: true,
-  },
-  {
-    label: `Research`,
-    href: ROUTERS.RESEARCH,
-    isNewWindow: false,
-    isHide: false,
-  },
+  // {
+  //   label: 'Products',
+  //   href: '',
+  //   isNewWindow: false,
+  //   isHide: false,
+  //   isDropdown: true,
+  // },
+  // {
+  //   label: `Research`,
+  //   href: ROUTERS.RESEARCH,
+  //   isNewWindow: false,
+  //   isHide: false,
+  // },
   {
     label: `Agents`,
-    href: ROUTERS.AGENTS_TOKEN,
+    href: ROUTERS.HOME,
     isNewWindow: false,
     isHide: false,
+    icon: "/icons/menu/ic-home.svg",
+    className: "blue",
   },
   {
-    label: 'Open Source',
-    href: 'https://github.com/eternalai-org/truly-open-ai',
-    isNewWindow: true,
-    isHide: false,
-  },
-  {
-    label: 'Get EAI',
-    href: ROUTERS.AI_EAI,
+    label: `Mine`,
+    href: ROUTERS.MINE,
     isNewWindow: false,
     isHide: false,
+    icon: "/icons/menu/ic-mine.svg",
+    className: "green",
   },
+  // {
+  //   label: 'Open Source',
+  //   href: 'https://github.com/eternalai-org/truly-open-ai',
+  //   isNewWindow: true,
+  //   isHide: false,
+  // },
+  // {
+  //   label: "Get EAI",
+  //   href: ROUTERS.AI_EAI,
+  //   isNewWindow: false,
+  //   isHide: false,
+  // },
 ].filter((item) => !item.isHide);

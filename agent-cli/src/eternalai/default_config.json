@@ -1,0 +1,13 @@
+{
+  "server": {
+    "port": 8484
+  },
+  "mongodb": {
+    "uri": "mongodb://localhost:27017",
+    "db": "decentralized-inference"
+  },
+  "file_path_infer": "/tmp/eternal-data",
+  "submit_file_path": false,
+  "chat_completion_url": "https://api.eternalai.org/v1/chat/completions",
+  "api_key_chat_completion": ""
+}

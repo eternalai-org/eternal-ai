@@ -1,0 +1,1 @@
+abigen --abi=AgentFactory.json --pkg=agentfactory --type AgentFactory --out=AgentFactory.go

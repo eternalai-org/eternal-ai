@@ -1,0 +1,6 @@
+{
+  "rpc": "https://base-mainnet.infura.io/v3/eb492201628143a094aa7afaeb9f32d2",
+  "model_name": "DeepSeek-R1-Distill-Llama-70B", 
+  "chain_id": "8453",
+  "agent_contract_address": "0xAed016e060e2fFE3092916b1650Fc558D62e1CCC"
+}

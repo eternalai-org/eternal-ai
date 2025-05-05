@@ -62,7 +62,7 @@ func (c *Client) Dagent721Mint(contractAddr string, prkHex string, to common.Add
 			return "", err
 		}
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}

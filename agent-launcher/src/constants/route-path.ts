@@ -1,8 +1,6 @@
 const ROUTERS = {
   HOME: "/",
-  RESEARCH: '/research',
-  AGENTS_TOKEN: '/agents',
-  AI_EAI: '/eai',
+  MINE: "/mine",
 };
 
 export default ROUTERS;

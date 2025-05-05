@@ -491,6 +491,7 @@ func (uc *knowledgeUsecase) WatchWalletChange(ctx context.Context) error {
 		}
 
 		for _, k := range resp {
+			time.Sleep(500 * time.Microsecond)
 			if err := uc.CheckBalance(ctx, k); err != nil {
 				continue
 			}
@@ -617,7 +618,10 @@ func (uc *knowledgeUsecase) CheckBalance(ctx context.Context, kn *models.Knowled
 }
 
 func (uc *knowledgeUsecase) balanceOfAddress(_ context.Context, address string, client *ethapi.Client, netInfo map[string]string) (*big.Int, error) {
-	chainId := client.ChainID()
+	chainId, err := client.ChainID()
+	if err != nil {
+		return nil, err
+	}
 	conAddress := netInfo["eai_contract_address"]
 	if address == "0x0000000000000000000000000000000000000000" || chainId == 0 || conAddress == "" {
 		return big.NewInt(0), nil

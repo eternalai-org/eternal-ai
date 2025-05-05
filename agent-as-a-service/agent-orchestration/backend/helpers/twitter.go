@@ -536,3 +536,21 @@ func PostThreadTweetByToken(accessToken string, messages []string) (string, erro
 	}
 	return parentTweetID, err
 }
+
+// dm
+func GetListDmRecent(accessToken string) error {
+
+	return nil
+}
+
+func GetDmByID(accessToken string) error {
+
+	return nil
+}
+
+func ReplyDm(accessToken string) error {
+
+	return nil
+}
+
+//

@@ -270,7 +270,10 @@ class LiveXDB(IToolCall):
         tweets = [x.tweet_object for x in context_resp.data.tweet_infos]
 
         info_resp = await twitter_v2.get_relevent_information_v2(
-            self.auth.kn_base, tweets=tweets
+            self.auth.kn_base,
+            tweets=tweets,
+            task_name=f"{self.auth.task}:{self.auth.toolset}",
+            use_bing_search=False,
         )
 
         conversational_chat = await get_reply_tweet_conversation(
@@ -669,7 +672,9 @@ class LiveXDB(IToolCall):
         return trading.get_token_price()
 
     def research_about_topic(self, topic):
-        return bing_search.search_from_bing(topic, top_k=10)
+        return bing_search.search_from_bing(
+            topic, top_k=10, task_name=f"{self.auth.task}:{self.auth.toolset}"
+        )
 
     def tool_list(self) -> List[ToolDef]:
         # Twitter API get tools

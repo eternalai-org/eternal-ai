@@ -185,7 +185,7 @@ def parse_deepseek_r1_result(content: str):
     result = {}
 
     pat = re.compile(
-        r"<think>(.*?)</think>(.*)", 
+        r"[<think>]?(.*?)</think>(.*)", 
         re.DOTALL | re.MULTILINE | re.IGNORECASE
     )
     

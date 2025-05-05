@@ -1,0 +1,1 @@
+abigen --abi=abi.json --pkg=celononfungiblepositionmanager --type NonfungiblePositionManager --out=NonfungiblePositionManager.go

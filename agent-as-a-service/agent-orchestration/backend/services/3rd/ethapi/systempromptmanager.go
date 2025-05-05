@@ -53,7 +53,7 @@ func (c *Client) SystemPromptManagerInfer(contractAddr string, prkHex string, ag
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}
@@ -120,7 +120,7 @@ func (c *Client) SystemPromptManagerTopup(contractAddr string, prkHex string, ag
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}
@@ -195,7 +195,7 @@ func (c *Client) SystemPromptManagerMint(contractAddr string, prkHex string, to 
 			return "", err
 		}
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}

@@ -165,3 +165,15 @@ func NewAgentStoreTryDetailRespArray(arr []*models.AgentStoreTryDetail) []*Agent
 	}
 	return resps
 }
+
+// ////
+type AgentUtilityTwitterReq struct {
+	AgentID string `json:"agent_id"`
+	Content string `json:"content"`
+	TxHash  string `json:"tx_hash"`
+}
+
+type AgentUtilityTwitterResp struct {
+	Message string `json:"message"`
+	AuthUrl string `json:"auth_url"`
+}

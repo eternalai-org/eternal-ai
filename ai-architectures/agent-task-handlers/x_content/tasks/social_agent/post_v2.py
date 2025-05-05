@@ -259,7 +259,9 @@ Topic list: {topics}
             bing_news = []
             if use_bing_news:
                 bing_news = await sync2async(search_from_bing)(
-                    today_topic, top_k=5
+                    today_topic,
+                    top_k=5,
+                    task_name=log.task,
                 )
                 news_source.extend(bing_news)
 

@@ -457,6 +457,23 @@ func (s *Server) uintArrayFromContextQuery(c *gin.Context, query string) ([]uint
 	return rets, nil
 }
 
+func (s *Server) intArrayFromContextQuery(c *gin.Context, query string) ([]int, error) {
+	val := strings.TrimSpace(c.Query(query))
+	if val == "" {
+		return []int{}, nil
+	}
+	vals := strings.Split(val, ",")
+	rets := []int{}
+	for _, val := range vals {
+		num, err := strconv.ParseUint(val, 10, 64)
+		if err != nil {
+			return []int{}, err
+		}
+		rets = append(rets, int(num))
+	}
+	return rets, nil
+}
+
 func (s *Server) dateFromContextQuery(c *gin.Context, query string) (*time.Time, error) {
 	val := strings.TrimSpace(c.Query(query))
 	if val == "" {
@@ -677,6 +694,9 @@ func (s *Server) agentSortListFromContext(c *gin.Context) []string {
 		"meme_price":          "1",
 		"meme_volume_last24h": "1",
 		"created_at":          "1",
+		"prompt_calls":        "1",
+		"installed_count":     "1",
+		"recent_chat_time":    "1",
 	}
 
 	for i, item := range arrayCol {
@@ -734,4 +754,82 @@ func (s *Server) getUserAddressFromTK1Token(c *gin.Context) (string, error) {
 		return "", err
 	}
 	return authData.Address, nil
+}
+
+func (s *Server) authCheckSignatureMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userAddress := c.GetHeader("XXX-Address")
+		userMessage := c.GetHeader("XXX-Message")
+		signature := c.GetHeader("XXX-Signature")
+
+		if signature == "" || userAddress == "" || userMessage == "" {
+			ctxAbortWithStatusJSON(c, http.StatusUnauthorized, &serializers.Resp{Error: errs.NewError(errs.ErrUnAuthorization)})
+			return
+		}
+
+		i, err := strconv.ParseInt(userMessage, 10, 64)
+		if err != nil {
+			ctxAbortWithStatusJSON(c, http.StatusUnauthorized, &serializers.Resp{Error: errs.NewError(errs.ErrUnAuthorization)})
+			return
+		}
+
+		timeSignature := helpers.TimeFromUnix(i)
+		timeValid := helpers.TimeNow().Add(-15 * time.Minute)
+		if timeSignature.Before(timeValid) {
+			ctxAbortWithStatusJSON(c, http.StatusUnauthorized, &serializers.Resp{Error: errs.NewError(errs.ErrUnAuthorization)})
+			return
+		}
+
+		err = s.nls.VerifyAddressSignature(context.Background(), models.ETHEREUM_CHAIN_ID, userAddress, userMessage, signature)
+		if err != nil {
+			ctxAbortWithStatusJSON(c, http.StatusUnauthorized, &serializers.Resp{Error: errs.NewError(errs.ErrUnAuthorization)})
+			return
+		}
+
+		c.Set("userData", &models.User{
+			Address: strings.ToLower(userAddress),
+		})
+
+		c.Next()
+	}
+}
+
+func (s *Server) getUserAddress(c *gin.Context) string {
+	return c.GetHeader("XXX-Address")
+}
+
+func (s *Server) middlewareApiLimit(numRequest int, duration time.Duration) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ip := s.getRequestIP(c)
+		apiPath := c.Request.URL.Path
+		limitKey := fmt.Sprintf("api_limit_%s_%s_%s", c.Request.Method, ip, apiPath)
+		var limit int
+		err := s.nls.GetRedisCachedWithKey(limitKey, &limit)
+		if err != nil {
+			// Only set limit to 0 if key doesn't exist, not on other redis errors
+			if err.Error() == "redis: nil" {
+				limit = 0
+			} else {
+				ctxAbortWithStatusJSON(c, http.StatusInternalServerError, &serializers.Resp{Error: errs.NewError(err)})
+				return
+			}
+		}
+		if limit >= numRequest {
+			ctxAbortWithStatusJSON(c, http.StatusTooManyRequests, &serializers.Resp{Error: errs.NewError(errors.New("too many requests"))})
+			return
+		}
+
+		// Calculate expiration time from start of current window
+		now := time.Now()
+		windowStart := now.Truncate(duration)
+		expireTime := windowStart.Add(duration)
+
+		// Only increment if we can set the value
+		err = s.nls.SetRedisCachedWithKey(limitKey, limit+1, time.Until(expireTime))
+		if err != nil {
+			ctxAbortWithStatusJSON(c, http.StatusInternalServerError, &serializers.Resp{Error: errs.NewError(err)})
+			return
+		}
+		c.Next()
+	}
 }

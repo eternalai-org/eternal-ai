@@ -42,6 +42,7 @@ class TwinService:
         self.hermes = create_llm(
             base_url=const.SELF_HOSTED_HERMES_70B_URL + "/v1",
             model_id=const.SELF_HOSTED_HERMES_70B_MODEL_IDENTITY,
+            api_key=const.SELF_HOSTED_HERMES_70B_API_KEY,
             temperature=0.01,
         )
 

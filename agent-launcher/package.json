@@ -14,12 +14,15 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@fontsource/inter": "^5.1.1",
+    "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.4.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-inlinesvg": "^4.2.0",
     "react-router-dom": "^7.2.0",
-    "sass": "^1.85.0"
+    "sass": "^1.85.0",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@types/react": "^18.2.64",

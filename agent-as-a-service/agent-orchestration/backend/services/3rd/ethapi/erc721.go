@@ -35,7 +35,7 @@ func (c *Client) Erc721Transfer(contractAddr string, prkHex string, toAddr strin
 	if err != nil {
 		return "", err
 	}
-	nonceAt, err := client.PendingNonceAt(context.Background(), pbkHex)
+	nonceAt, err := c.PendingNonceAt(context.Background(), pbkHex)
 	if err != nil {
 		return "", err
 	}

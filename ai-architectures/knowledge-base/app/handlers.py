@@ -508,7 +508,6 @@ async def process_data(req: InsertInputSchema, model_use: EmbeddingModel):
         shutil.rmtree(tmp_dir, ignore_errors=True)
         logger.info(f"Completed handling task: {req.id}")
 
-@schedule.every(5).minutes.do
 def resume_pending_tasks():
     if len(_running_tasks) > 0:
         return
@@ -718,20 +717,23 @@ async def run_query(req: QueryInputSchema) -> List[QueryResult]:
 
     # Extract named entities from the query
     resp  = await get_gk().extract_named_entities(req.query)
-    logger.info(f"Extracted NER: {resp.result}")
+    logger.info(f"NER: {resp.result}")
 
     if resp.status != APIStatus.OK:
         logger.warning(f"No entities extracted from the given query. Message: {resp.error}")
 
     ner_query_list = resp.result or []
+
+    embeddings = await mk_cog_embedding_retry_wrapper_priotized(
+        [req.query, *ner_query_list], embedding_model
+    )
+
     cli: MilvusClient = milvus_kit.get_reusable_milvus_client(const.MILVUS_HOST) 
 
     if len(ner_query_list) > 0:
         res = await sync2async(cli.search)(
             collection_name=model_identity,
-            data=await mk_cog_embedding_retry_wrapper_priotized(
-                ner_query_list, embedding_model
-            ),
+            data=embeddings[1:],
             kb_filter=f"kb in {entity_kb}",
             anns_field="embedding",
             output_fields=["head", "tail"],
@@ -751,24 +753,13 @@ async def run_query(req: QueryInputSchema) -> List[QueryResult]:
         nodes = list(set(nodes))
         filter_str += f" and (head in {nodes} or tail in {nodes})"
 
-    query_embedding = await mk_cog_embedding_retry_wrapper_priotized(
-        req.query, embedding_model
-    )
+    filter_str = f"({filter_str}) or kb in {req.kb}"
+    query_embedding = embeddings[0]
 
     res = await sync2async(cli.search)(
         collection_name=model_identity,
-        data=query_embedding,
+        data=[query_embedding],
         filter=filter_str,
-        limit=max(req.top_k, 1),
-        anns_field="embedding",
-        output_fields=["id", "content", "reference", "hash"],
-        search_params={"params": {"radius": req.threshold}},
-    )
-
-    res_raw = await sync2async(cli.search)(
-        collection_name=model_identity,
-        data=query_embedding,
-        filter=f"kb in {req.kb}",
         limit=max(req.top_k, 1),
         anns_field="embedding",
         output_fields=["id", "content", "reference", "hash"],
@@ -781,26 +772,6 @@ async def run_query(req: QueryInputSchema) -> List[QueryResult]:
             for item in res[0]
         }.values()
     )
-    
-    extended_hits = list(
-        {
-            item['entity']['hash']: item 
-            for item in res_raw[0]
-        }.values()
-    )
-    
-    m = {
-        e['entity']['hash']: i
-        for i, e in enumerate(hits)
-    }
-    
-    for hit in extended_hits:
-        if hit['entity']['hash'] in m:
-            index = m[hit['entity']['hash']]
-            hits[index]['distance'] = (hit['distance'] + hits[index]['distance']) / 2
-            continue
-
-        hits.append(hit)
 
     for i in range(len(hits)):
         hits[i]['score'] = estimate_ip_from_distance(

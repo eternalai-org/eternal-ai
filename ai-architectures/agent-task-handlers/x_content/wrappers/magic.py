@@ -28,11 +28,12 @@ def retry(func: Callable, max_retry=5, first_interval=10, interval_multiply=1):
                 logger.error(
                     f"Function {func.__name__} failed with error '{err}'. Retry attempt {iter}/{max_retry}"
                 )
+
+                if iter == max_retry:
+                    raise err
+
             time.sleep(interval)
             interval *= interval_multiply
-
-        logger.error(f"Function {func.__name__} failed after all retry.")
-        raise Exception(f"Function {func.__name__} failed after all retry.")
 
     async def async_wrapper(*args, **kwargs):
         interval = first_interval
@@ -45,11 +46,12 @@ def retry(func: Callable, max_retry=5, first_interval=10, interval_multiply=1):
                 logger.error(
                     f"Function {func.__name__} failed with error '{err}'. Retry attempt {iter}/{max_retry}"
                 )
+                
+                if iter == max_retry:
+                    raise err
+                
             await asyncio.sleep(interval)
             interval *= interval_multiply
-
-        logger.error(f"Function {func.__name__} failed after all retry.")
-        raise Exception(f"Function {func.__name__} failed after all retry.")
 
     return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 

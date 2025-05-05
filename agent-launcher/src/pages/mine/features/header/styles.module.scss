@@ -1,0 +1,29 @@
+.header {
+  &_left {
+    &_address {
+      color: #5B5B5B;
+      text-align: center;
+      font-size: 20px;
+      font-style: normal;
+      font-weight: 500;
+      line-height: 160%; /* 32px */
+
+      &_icon {
+        cursor: pointer;
+      }
+    }
+
+    &_balance {
+      color: #000;
+      font-size: 32px;
+      font-style: normal;
+      font-weight: 600;
+      line-height: 160%; /* 51.2px */
+
+      &_unit {
+        opacity: .5;
+      }
+    }
+
+  }
+}

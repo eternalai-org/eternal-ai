@@ -174,8 +174,10 @@ type Config struct {
 	AiImageApiKey string `json:"ai_image_api_key"`
 	CMCApiKey     string `json:"cmc_api_key"`
 	Ai            struct {
-		ChatUrl string `json:"chat_url"`
-		ApiKey  string `json:"api_key"`
+		ChatUrl         string `json:"chat_url"`
+		ApiKey          string `json:"api_key"`
+		ApiKeyMacStudio string `json:"api_key_mac_studio"`
+		ModelName       string `json:"model_name"`
 	} `json:"ai"`
 	Lighthouse struct {
 		Apikey string `json:"apikey"`
@@ -186,13 +188,20 @@ type Config struct {
 		MentionApiKey  string `json:"mention_api_key"`
 		MentionNewFlow bool   `json:"MentionNewFlow"`
 	} `json:"ai_dojo_backend"`
-	EternalAiAgentInfoId  uint   `json:"eternal_ai_agent_info_id"`
-	NobullshitAgentInfoId uint   `json:"nobullshit_agent_info_id"`
-	LaunchpadAgentInfoId  uint   `json:"launchpad_agent_info_id"`
-	HiroUrl               string `json:"hiro_url"`
-	OpenseaAPIKey         string `json:"opensea_api_key"`
-	TaApiKey              string `json:"ta_api_key"`
-	DelegateCash          struct {
+	EternalAiAgentInfoId              uint   `json:"eternal_ai_agent_info_id"`
+	VideoAiAgentInfoId                uint   `json:"video_ai_agent_info_id"`
+	DetectVideoLLMVersion             string `json:"detect_video_llm_version"`
+	VideoTelegramKey                  string `json:"video_telegram_key"`
+	VideoActivitiesTelegramAlert      string `json:"video_activities_telegram_alert"`
+	VideoFailSyntaxTelegramAlert      string `json:"video_fail_syntax_telegram_alert"`
+	GenMagicVideoPrompt               bool   `json:"gen_magic_video_prompt"`
+	MagicVideoActivitiesTelegramAlert string `json:"magic_video_activities_telegram_alert"`
+	NobullshitAgentInfoId             uint   `json:"nobullshit_agent_info_id"`
+	LaunchpadAgentInfoId              uint   `json:"launchpad_agent_info_id"`
+	HiroUrl                           string `json:"hiro_url"`
+	OpenseaAPIKey                     string `json:"opensea_api_key"`
+	TaApiKey                          string `json:"ta_api_key"`
+	DelegateCash                      struct {
 		Url    string `json:"url"`
 		ApiKey string `json:"api_key"`
 	} `json:"delegate_cash"`
@@ -244,6 +253,7 @@ type Config struct {
 	LuckyMoneyAdminAddressSol   string                       `json:"lucky_money_admin_address_sol"`
 	WebhookUrl                  string                       `json:"webhook_url"`
 	KnowledgeBaseConfig         KnowledgeBaseConfig          `json:"knowledge_base_config"`
+	GetResultInferUrl           string                       `json:"get_result_infer_url"`
 	AgentDeployer               struct {
 		Url    string `json:"url"`
 		ApiKey string `json:"api_key"`
@@ -261,7 +271,28 @@ type Config struct {
 		NetworkID         uint64 `json:"network_id"`
 		AgentAddress      string `json:"agent_address"`
 		WorkerAddress     string `json:"worker_address"`
+		AgentID           uint   `json:"agent_id"`
+		Fee               uint   `json:"fee"`
 	} `json:"infra_twitter_app"`
+	Clanker struct {
+		IsCreateToken            bool    `json:"is_create_token"`
+		RequestorAddress         string  `json:"requestor_address"`
+		ApiKey                   string  `json:"api_key"`
+		ApiUrl                   string  `json:"api_url"`
+		CreatorRewardsPercentage float64 `json:"creator_rewards_percentage"`
+		CreatorRewardsAdmin      string  `json:"creator_rewards_admin"`
+	} `json:"clanker"`
+	Privy struct {
+		AppID     string   `json:"app_id"`
+		AppSecret string   `json:"app_secret"`
+		AppIDList []string `json:"app_id_list"`
+	} `json:"privy"`
+	PrivyEx map[string]string `json:"privy_ex"`
+	Robot   struct {
+		TokenAdminAddress string `json:"token_admin_address"`
+		TokenSupply       uint64 `json:"token_supply"`
+	} `json:"robot"`
+	LighthouseUploadBinaryUrl string `json:"lighthouse_upload_binary_url"`
 }
 
 func (cf *Config) ExistsedConfigKey(networkID uint64, name string) bool {
@@ -284,14 +315,14 @@ func (cf *Config) GetConfigKeyString(networkID uint64, name string) string {
 	networkIDStr := fmt.Sprintf("%d", networkID)
 	n, ok := cf.Networks[networkIDStr]
 	if !ok {
-		panic("not found")
+		panic(fmt.Sprintf("not found %d %s", networkID, name))
 	}
 	v, ok := n[name]
 	if !ok {
-		panic("not found")
+		panic(fmt.Sprintf("not found %d %s", networkID, name))
 	}
 	if v == "" {
-		panic("not found")
+		panic(fmt.Sprintf("not found %d %s", networkID, name))
 	}
 	return v
 }
@@ -300,7 +331,7 @@ func (cf *Config) GetConfigKeyBool(networkID uint64, name string) bool {
 	networkIDStr := fmt.Sprintf("%d", networkID)
 	n, ok := cf.Networks[networkIDStr]
 	if !ok {
-		panic("not found")
+		panic(fmt.Sprintf("not found %d %s", networkID, name))
 	}
 	v, ok := n[name]
 	if !ok {
@@ -319,6 +350,7 @@ func (cf *Config) GetConfigKeyBool(networkID uint64, name string) bool {
 type KnowledgeBaseConfig struct {
 	EnableSimulation          bool   `json:"enable_simulation"`
 	QueryServiceUrl           string `json:"query_service_url"`
+	ToolCallServiceUrl        string `json:"tool_call_service_url"`
 	DirectServiceUrl          string `json:"direct_service_url"`
 	KbChatTopK                int    `json:"kb_chat_top_k"`
 	KBTelegramKey             string `json:"kb_telegram_key"`

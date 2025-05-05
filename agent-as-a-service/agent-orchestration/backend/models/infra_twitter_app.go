@@ -1,45 +1,31 @@
 package models
 
 import (
-	"time"
-
+	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/types/numeric"
 	"github.com/jinzhu/gorm"
 )
 
 type InfraTwitterApp struct {
 	gorm.Model
-	InstallCode   string
 	Address       string
 	TwitterInfoID uint
 	TwitterInfo   *TwitterInfo
+	EaiBalance    numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	TotalRequest  uint64
+	RemainRequest uint64
+	ETHAddress    string `gorm:"index"`
 }
 
-type (
-	InfraRequestStatus string
-)
-
-const (
-	InfraRequestStatusPending  InfraRequestStatus = "pending"
-	InfraRequestStatusError    InfraRequestStatus = "error"
-	InfraRequestStatusExecuted InfraRequestStatus = "executed"
-	InfraRequestStatusInvalid  InfraRequestStatus = "invalid"
-)
-
-type InfraRequest struct {
+type InfraTwitterTopupTx struct {
 	gorm.Model
-	NetworkID       uint64
-	AgentInfoID     uint `gorm:"index"`
-	AgentInfo       *AgentInfo
-	TxHash          string `gorm:"index"`
-	ContractAddress string `gorm:"index"`
-	EventId         string `gorm:"unique_index:infra_request_main_idx"`
-	TxAt            time.Time
-	Status          InfraRequestStatus
-	Uuid            string `gorm:"index"`
-	Data            string `gorm:"type:longtext"`
-	Creator         string `gorm:"index"`
-	ResultHash      string
-	Result          string `gorm:"type:longtext"`
-	Error           string
-	ActId           uint64
+	NetworkID         uint64
+	EventId           string `gorm:"unique_index"`
+	InfraTwitterAppID uint   `gorm:"index"`
+	InfraTwitterApp   *InfraTwitterApp
+	Type              AgentEaiTopupType `gorm:"default:'deposit'"`
+	DepositAddress    string
+	ToAddress         string
+	TxHash            string
+	Amount            numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	Status            AgentEaiTopupStatus
 }

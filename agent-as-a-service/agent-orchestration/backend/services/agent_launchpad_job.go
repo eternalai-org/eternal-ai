@@ -344,7 +344,7 @@ func (s *Service) AgentDeployDAOToken(ctx context.Context, memeID uint) error {
 					}
 				}
 				if m.Status == models.LaunchpadStatusEnd && m.TokenSymbol != "" && m.TokenAddress == "" {
-					daoPoolAddress := strings.ToLower(s.conf.GetConfigKeyString(m.NetworkID, "dao_pool_address"))
+					daoPoolAddress := strings.ToLower(s.conf.GetConfigKeyString(m.NetworkID, "meme_pool_address"))
 					tokenAddress, txHash, err := func() (string, string, error) {
 						tokenAddr, tokenHash, err := s.GetEthereumClient(ctx, m.NetworkID).
 							DeployDAOTToken(
@@ -453,7 +453,7 @@ func (s *Service) AgentSettleDAOToken(ctx context.Context, memeID uint) error {
 				return errs.NewError(errs.ErrBadRequest)
 			}
 			if m.Status == models.LaunchpadStatusTokenCreated && m.SettleFundTxHash == "" {
-				daoPoolAddress := strings.ToLower(s.conf.GetConfigKeyString(m.NetworkID, "dao_pool_address"))
+				daoPoolAddress := strings.ToLower(s.conf.GetConfigKeyString(m.NetworkID, "meme_pool_address"))
 				txHash, err := func() (string, error) {
 					hash, err := s.GetEthereumClient(ctx, m.NetworkID).
 						DAOTreasurySettleFund(
@@ -582,7 +582,7 @@ func (s *Service) AgentAddLiquidityDAOToken(ctx context.Context, memeID uint) er
 				return errs.NewError(errs.ErrBadRequest)
 			}
 			if m.Status == models.LaunchpadStatusTge && m.AddLiquidityTxHash == "" {
-				daoPoolAddress := strings.ToLower(s.conf.GetConfigKeyString(m.NetworkID, "dao_pool_address"))
+				daoPoolAddress := strings.ToLower(s.conf.GetConfigKeyString(m.NetworkID, "meme_pool_address"))
 				{
 					hash, err := s.GetEthereumClient(ctx, m.NetworkID).
 						Erc20ApproveMaxCheck(
@@ -776,7 +776,7 @@ func (s *Service) AgentTgeTransferDAOTokenMulti(ctx context.Context, launchpadID
 				ids = append(ids, m.ID)
 			}
 			if len(ids) > 0 {
-				daoPoolAddress := strings.ToLower(s.conf.GetConfigKeyString(networkID, "dao_pool_address"))
+				daoPoolAddress := strings.ToLower(s.conf.GetConfigKeyString(networkID, "meme_pool_address"))
 				multisendAddress := strings.ToLower(s.conf.GetConfigKeyString(networkID, "multisend_contract_address"))
 				tokenAddress := launchpad.TokenAddress
 				{
@@ -953,7 +953,7 @@ func (s *Service) AgentTgeRefundBaseTokenMulti(ctx context.Context, networkID ui
 		fmt.Sprintf("AgentTgeRefundBaseTokenMulti_%d", networkID),
 		func() error {
 			if len(ids) > 0 {
-				daoPoolAddress := strings.ToLower(s.conf.GetConfigKeyString(networkID, "dao_pool_address"))
+				daoPoolAddress := strings.ToLower(s.conf.GetConfigKeyString(networkID, "meme_pool_address"))
 				baseTokenAddress := strings.ToLower(s.conf.GetConfigKeyString(networkID, "eai_contract_address"))
 				multisendAddress := strings.ToLower(s.conf.GetConfigKeyString(networkID, "multisend_contract_address"))
 				{

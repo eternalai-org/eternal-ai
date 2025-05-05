@@ -17,8 +17,7 @@ class ChatService:
     ) -> str:
         graph = get_chat_langgraph(llm)
 
-        messages = chat_request.messages
-
+        messages = chat_request.messages.copy()
         if len(messages) == 0:
             raise ValueError("Input messages must not be empty")
 
@@ -27,31 +26,29 @@ class ChatService:
 
         if messages[0].role == "system":
             messages = messages[1:]
-
-        messages.insert(
-            0,
-            ChatMessage(
-                role="system",
-                content=chat_request.agent_meta_data.persona
-            ),
-        )
+        if len(messages) == 0:
+            raise ValueError(
+                "Input messages must have a least one user message"
+            )
+        # messages.insert(
+        #     0,
+        #     ChatMessage(
+        #         role="system", content=chat_request.agent_meta_data.persona
+        #     ),
+        # )
 
         events = graph.astream(
-            {
-                "messages": messages
-            },
+            {"messages": messages},
             config={
                 "configurable": {
                     "thread_id": chat_request.id,
                     "user_id": chat_request.user_address,
+                    "persona": chat_request.agent_meta_data.persona,
                 }
             },
         )
 
-        events = [
-            x 
-            async for x in events
-        ]
+        events = [x async for x in events]
 
         if len(events) == 0:
             raise Exception("No result return from langgraph")

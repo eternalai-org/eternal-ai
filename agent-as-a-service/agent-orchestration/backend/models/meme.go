@@ -46,64 +46,70 @@ const (
 
 type Meme struct {
 	gorm.Model
-	NetworkID         uint64
-	OwnerAddress      string `gorm:"index"`
-	OwnerID           uint   `gorm:"index"`
-	Owner             *User
-	AgentInfoID       uint `gorm:"unique_index"`
-	AgentInfo         *AgentInfo
-	TokenAddress      string           `gorm:"index"`
-	TokenId           string           `gorm:"index"`
-	TotalSuply        numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	Decimals          uint64
-	Name              string
-	Ticker            string
-	Description       string `gorm:"type:longtext collate utf8mb4_unicode_ci"`
-	Err               string `gorm:"type:text collate utf8mb4_unicode_ci"`
-	Image             string
-	Twitter           string
-	Telegram          string
-	Website           string
-	Status            MemeStatus `gorm:"index"`
-	Pool              string     `gorm:"index"`
-	UniswapPool       string     `gorm:"index"`
-	Token0Address     string
-	Token1Address     string
-	Reserve0          numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	Reserve1          numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	Supply            numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	Price             numeric.BigFloat `gorm:"index;type:decimal(36,18);default:0"`
-	PriceUsd          numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	PriceLast24h      numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	VolumeLast24h     numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	TotalVolume       numeric.BigFloat `gorm:"index;type:decimal(36,18);default:0"`
-	TimeIndex         uint64
-	BaseTokenIndex    int
-	ZeroForOne        bool
-	BaseTokenSymbol   string           `gorm:"default:'ETH'"`
-	ReplyCount        uint64           `gorm:"index;default:0"`
-	LastReply         *time.Time       `gorm:"index"`
-	PositionID        int64            `gorm:"default:0"`
-	UniswapPositionID int64            `gorm:"default:0"`
-	Liquidity         numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	PositionLiquidity numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	TickLower         int64
-	TickUpper         int64
-	Tick              int64
-	AddPool1TxHash    string
-	RemovePool1TxHash string
-	AddPool2TxHash    string
-	AddPool2At        *time.Time `gorm:"index"`
-	BurnPool2TxHash   string
-	BurnPool2At       *time.Time `gorm:"index"`
-	PoolFee           uint
-	Weight            int `gorm:"index;default:0"`
-	Shared            int
-	ReqSyncAt         *time.Time
-	SyncAt            *time.Time
-	Fee               numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
-	ExternalTradeUrl  string
-	NumRetries        int `gorm:"default:0"`
+	NetworkID             uint64
+	OwnerAddress          string `gorm:"index"`
+	OwnerID               uint   `gorm:"index"`
+	Owner                 *User
+	AgentInfoID           uint `gorm:"unique_index"`
+	AgentInfo             *AgentInfo
+	TokenAddress          string `gorm:"index"`
+	TokenId               string `gorm:"index"`
+	FactoryAddress        string
+	TotalSuply            numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	Decimals              uint64
+	Name                  string
+	Ticker                string
+	Description           string `gorm:"type:longtext collate utf8mb4_unicode_ci"`
+	Err                   string `gorm:"type:text collate utf8mb4_unicode_ci"`
+	Image                 string
+	Twitter               string
+	Telegram              string
+	Website               string
+	Status                MemeStatus `gorm:"index"`
+	Pool                  string     `gorm:"index"`
+	UniswapPool           string     `gorm:"index"`
+	Token0Address         string
+	Token1Address         string
+	Reserve0              numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	Reserve1              numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	Supply                numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	Price                 numeric.BigFloat `gorm:"index;type:decimal(36,18);default:0"`
+	PriceUsd              numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	PriceLast24h          numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	VolumeLast24h         numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	TotalVolume           numeric.BigFloat `gorm:"index;type:decimal(36,18);default:0"`
+	TimeIndex             uint64
+	BaseTokenIndex        int
+	ZeroForOne            bool
+	BaseTokenSymbol       string           `gorm:"default:'ETH'"`
+	ReplyCount            uint64           `gorm:"index;default:0"`
+	LastReply             *time.Time       `gorm:"index"`
+	PositionID            int64            `gorm:"default:0"`
+	UniswapPositionID     int64            `gorm:"default:0"`
+	Liquidity             numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	PositionLiquidity     numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	TickLower             int64
+	TickUpper             int64
+	Tick                  int64
+	AddPool1TxHash        string
+	RemovePool1TxHash     string
+	AddPool2TxHash        string
+	AddPool2At            *time.Time `gorm:"index"`
+	BurnPool2TxHash       string
+	BurnPool2At           *time.Time `gorm:"index"`
+	PoolFee               uint
+	Weight                int `gorm:"index;default:0"`
+	Shared                int
+	ReqSyncAt             *time.Time
+	SyncAt                *time.Time
+	Fee                   numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	ExternalTradeUrl      string
+	NumRetries            int              `gorm:"default:0"`
+	NotGraduated          bool             `gorm:"default:0"`
+	Fees0CollectedBalance numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	Fees1CollectedBalance numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	FeesCollectedUpdated  uint64           `gorm:"default:0"`
+	PoolSwappedUpdated    uint64           `gorm:"default:0"`
 
 	//
 	Percent                float64 `gorm:"-"`
@@ -314,4 +320,13 @@ type BotOrder struct {
 	Status      BotOrderStatus
 	ParentID    uint
 	Error       string
+}
+
+type MemeFeesCollected struct {
+	gorm.Model
+	EventId string `gorm:"unique_index"`
+	MemeID  uint   `gorm:"index"`
+	TxHash  string
+	Amount0 numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
+	Amount1 numeric.BigFloat `gorm:"type:decimal(36,18);default:0"`
 }

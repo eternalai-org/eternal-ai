@@ -26,6 +26,8 @@ from x_content.wrappers.game import (
     GameStatus,
     GameState,
 )
+from x_content.wrappers.llm_tasks import summarize_judge_commentary
+from x_content.tasks.game_agent.subtasks.reply.reply_create_game import _post_wallet_tweet
 from x_content.services import fact_service
 from x_content.services.fact.fact_check import SearchResponse
 
@@ -646,30 +648,53 @@ async def _handle_winner_with_llm(log: ReasoningLog, llm, game_id, answers):
         else _get_judge_game_with_facts_conversation(tweet_obj, answers)
     )
     logger.info(
-        f"[_handle_winner_with_llm] Created conversation thread for judging: {conversation_thread}"
+        f"[_handle_winner_with_llm] Created conversation thread for {game_id} judging: {conversation_thread}"
     )
 
-    logger.info("[_handle_winner_with_llm] Calling LLM for judgment")
+    logger.info(
+        f"[_handle_winner_with_llm] Calling LLM for {game_id} judgment"
+    )
     infer_result: OnchainInferResult = await llm.agenerate(
         conversation_thread, temperature=0.7
     )
+    logger.info(
+        f"[_handle_winner_with_llm] Calling LLM for {game_id} llm.agenerate complete"
+    )
+
+    summarize = await sync2async(summarize_judge_commentary)(
+        infer_result.generations[0].message.content
+    )
+
+    logger.info(
+        f"[_handle_winner_with_llm] Calling LLM for {game_id} summarize_judge_commentary : {summarize}"
+    )
+
+    # err = await _post_wallet_tweet(log, game_id, summarize)
+    for key, reason in summarize.items():
+        err = await _post_wallet_tweet(log, game_id, reason)
+
+    if err is not None:
+        logger.error(
+            f"[_handle_winner_with_llm] Error posting game {game_id} summarize: {err}"
+        )
+        return None, None, err
 
     winning_agent, err = _get_winner_from(
         infer_result.generations[0].message.content
     )
     if err is not None:
         logger.error(
-            f"[_handle_winner_with_llm] Error getting winner from LLM: {err}"
+            f"[_handle_winner_with_llm] Error getting winner for game {game_id} from LLM: {err}"
         )
         return None, None, err
 
     logger.info(
-        f"[_handle_winner_with_llm] LLM selected winner: {winning_agent}"
+        f"[_handle_winner_with_llm] LLM for game {game_id} selected winner: {winning_agent}"
     )
     _, err = await _post_game_result(log, game_id, winning_agent)
     if err is not None:
         logger.error(
-            f"[_handle_winner_with_llm] Error posting game result: {err}"
+            f"[_handle_winner_with_llm] Error posting game {game_id} result: {err}"
         )
         return None, None, err
 

@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/helpers"
+	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/agentfactory"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/agentshares"
+	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/agentupgradeable"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/arbitrumfactory"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/arbitrumnonfungiblepositionmanager"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/basenonfungiblepositionmanager"
@@ -17,10 +19,10 @@ import (
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/erc721"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/imagehub"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/iworkerhub"
-	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/orderpayment"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/systempromptmanager"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/uniswapv3factory"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/uniswapv3pool"
+	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/vibetokenfactory"
 
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/binds/wbvm"
 	"github.com/ethereum/go-ethereum"
@@ -160,8 +162,10 @@ type BlockChainEventResp struct {
 	SystemPromptManagerNewTokens        []*systempromptmanager.SystemPromptManagerNewToken        `json:"system_prompt_manager_new_tokens"`
 	SystemPromptManagerAgentDataUpdates []*systempromptmanager.SystemPromptManagerAgentDataUpdate `json:"system_prompt_manager_agent_data_updates"`
 	SystemPromptManagerAgentURIUpdates  []*systempromptmanager.SystemPromptManagerAgentURIUpdate  `json:"system_prompt_manager_agent_uri_updates"`
-	OrderpaymentOrderPaids              []*orderpayment.OrderpaymentOrderPaid                     `json:"orderpayment_order_paid"`
 	RealWorldAgentExecutionRequested    []*RealWorldAgentExecutionRequested                       `json:"real_world_agent_execution_requested"`
+	CodePointerCreated                  []*agentupgradeable.AgentUpgradeableCodePointerCreated    `json:"code_pointer_created"`
+	AgentCreated                        []*agentfactory.AgentFactoryAgentCreated                  `json:"agent_created"`
+	VibeTokenFactoryTokenDeployed       []*vibetokenfactory.VibeTokenFactoryTokenDeployed         `json:"vibe_token_factory_token_deployed"`
 }
 
 func (c *Client) NewEventResp() *BlockChainEventResp {
@@ -252,11 +256,14 @@ func (c *Client) ScanEvents(contractAddrs []string, startBlock, endBlock int64) 
 					common.HexToHash("0x61beab98a81083e3c0239c33e149bef1316ca78f15b9f29125039f5521a06d06"),
 					common.HexToHash("0xe42abf7d4a793286da8cc1399cb577a1f5a0e133dfee371bb3a5abbdd77b011e"),
 					common.HexToHash("0x706a4e8eb2f354c7f4d96e5ea1984f36e72482629987edad78c9940ea037c362"),
-					// OrderPayment
-					common.HexToHash("0xc2522570932e6dff27df2e5c31cfd70be3653d564375e29575d4360aafca4eb5"),
-
 					//RealWorldAgent
 					common.HexToHash("0x9096741026bdd638bcc5cb995f0f00b4574b81f120a23c4a7086347116bf58a1"),
+					// AgentUpgradeable
+					common.HexToHash("0x0c69de805f518c322126e1fa81f2e91d814412a2ad304638fcaed200bd7f43dc"),
+					// AgentFactory
+					common.HexToHash("0x7c96960a1ebd8cc753b10836ea25bd7c9c4f8cd43590db1e8b3648cb0ec4cc89"),
+					// VibeTokenFactory
+					common.HexToHash("0x035044c956f0f85240e40898163f0636d588d72de5fd08d79a9168d626745173"),
 				},
 			},
 		},
@@ -278,6 +285,10 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 	if err != nil {
 		return err
 	}
+	chainId, err := c.ChainID()
+	if err != nil {
+		return err
+	}
 	blockTime := uint64(time.Now().Unix())
 	erc20, err := erc20.NewErc20(log.Address, client)
 	if err != nil {
@@ -290,7 +301,7 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 			resp.Transfer = append(
 				resp.Transfer,
 				&Erc20TokenTransferEventResp{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: c.ConvertAddressForOut(logParsed.Raw.Address.Hex()),
 					Timestamp:       blockTime,
@@ -311,7 +322,7 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 			resp.Transfer = append(
 				resp.Transfer,
 				&Erc20TokenTransferEventResp{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -331,7 +342,7 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 			resp.Transfer = append(
 				resp.Transfer,
 				&Erc20TokenTransferEventResp{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -356,7 +367,7 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 			resp.NftTransfer = append(
 				resp.NftTransfer,
 				&NftTransferEventResp{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -382,7 +393,7 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 				resp.ERC1155Transfer = append(
 					resp.ERC1155Transfer,
 					&ERC1155ransferEventResp{
-						NetworkID:       c.ChainID(),
+						NetworkID:       chainId,
 						TxHash:          log.TxHash.Hex(),
 						ContractAddress: logParsed.Raw.Address.Hex(),
 						Timestamp:       blockTime,
@@ -403,7 +414,7 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 			resp.ERC1155Transfer = append(
 				resp.ERC1155Transfer,
 				&ERC1155ransferEventResp{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -474,7 +485,7 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 			resp.ImageHubImageTipTransferred = append(
 				resp.ImageHubImageTipTransferred,
 				&ImageHubImageTipTransferred{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -496,7 +507,7 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 			resp.ImageHubSubscriptionPriceUpdated = append(
 				resp.ImageHubSubscriptionPriceUpdated,
 				&ImageHubSubscriptionPriceUpdated{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -516,7 +527,7 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 			resp.ImageHubSubscriptionRegistered = append(
 				resp.ImageHubSubscriptionRegistered,
 				&ImageHubSubscriptionRegistered{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -537,7 +548,7 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 			resp.ImageHubSubscriptionCharged = append(
 				resp.ImageHubSubscriptionCharged,
 				&ImageHubSubscriptionCharged{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -565,7 +576,7 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 			resp.WorkerHubNewInference = append(
 				resp.WorkerHubNewInference,
 				&WorkerHubNewInference{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -780,22 +791,6 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 			}
 		}
 	}
-	{
-		instance, err := orderpayment.NewOrderpayment(log.Address, client)
-		if err != nil {
-			return err
-		}
-		{
-			logParsed, err := instance.ParseOrderPaid(*log)
-			if err == nil {
-				resp.OrderpaymentOrderPaids = append(
-					resp.OrderpaymentOrderPaids,
-					logParsed,
-				)
-			}
-		}
-	}
-
 	//realworld agent
 	infra, err := realworldagent.NewERC20RealWorldAgent(log.Address, client)
 	if err != nil {
@@ -819,6 +814,49 @@ func (c *Client) ParseEventResp(resp *BlockChainEventResp, log *types.Log) error
 					Data:            string(logParsed.Data[:]),
 				},
 			)
+		}
+	}
+	{
+		instance, err := agentupgradeable.NewAgentUpgradeable(log.Address, client)
+		if err != nil {
+			return err
+		}
+		{
+			logParsed, err := instance.ParseCodePointerCreated(*log)
+			if err == nil {
+				resp.CodePointerCreated = append(
+					resp.CodePointerCreated,
+					logParsed,
+				)
+			}
+		}
+	}
+	// AgentFactory
+	{
+		instance, err := agentfactory.NewAgentFactory(log.Address, client)
+		if err != nil {
+			return err
+		}
+		{
+			logParsed, err := instance.ParseAgentCreated(*log)
+			if err == nil {
+				resp.AgentCreated = append(resp.AgentCreated, logParsed)
+			}
+		}
+	}
+	{
+		instance, err := vibetokenfactory.NewVibeTokenFactory(log.Address, client)
+		if err != nil {
+			return err
+		}
+		{
+			logParsed, err := instance.ParseTokenDeployed(*log)
+			if err == nil {
+				resp.VibeTokenFactoryTokenDeployed = append(
+					resp.VibeTokenFactoryTokenDeployed,
+					logParsed,
+				)
+			}
 		}
 	}
 	return nil
@@ -936,7 +974,12 @@ func (c *Client) NewErc20TokenEventResp() *Erc20TokenEventResp {
 }
 
 func (c *Client) Erc20TokenEventResp(resp *Erc20TokenEventResp, log *types.Log) error {
+
 	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+	chainId, err := c.ChainID()
 	if err != nil {
 		return err
 	}
@@ -952,7 +995,7 @@ func (c *Client) Erc20TokenEventResp(resp *Erc20TokenEventResp, log *types.Log) 
 			resp.Transfer = append(
 				resp.Transfer,
 				&Erc20TokenTransferEventResp{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -977,7 +1020,7 @@ func (c *Client) Erc20TokenEventResp(resp *Erc20TokenEventResp, log *types.Log) 
 			resp.Transfer = append(
 				resp.Transfer,
 				&Erc20TokenTransferEventResp{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -997,7 +1040,7 @@ func (c *Client) Erc20TokenEventResp(resp *Erc20TokenEventResp, log *types.Log) 
 			resp.Transfer = append(
 				resp.Transfer,
 				&Erc20TokenTransferEventResp{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -1022,7 +1065,7 @@ func (c *Client) Erc20TokenEventResp(resp *Erc20TokenEventResp, log *types.Log) 
 			resp.NftTransfer = append(
 				resp.NftTransfer,
 				&NftTransferEventResp{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,
@@ -1048,7 +1091,7 @@ func (c *Client) Erc20TokenEventResp(resp *Erc20TokenEventResp, log *types.Log) 
 				resp.ERC1155Transfer = append(
 					resp.ERC1155Transfer,
 					&ERC1155ransferEventResp{
-						NetworkID:       c.ChainID(),
+						NetworkID:       chainId,
 						TxHash:          log.TxHash.Hex(),
 						ContractAddress: logParsed.Raw.Address.Hex(),
 						Timestamp:       blockTime,
@@ -1067,7 +1110,7 @@ func (c *Client) Erc20TokenEventResp(resp *Erc20TokenEventResp, log *types.Log) 
 			resp.ERC1155Transfer = append(
 				resp.ERC1155Transfer,
 				&ERC1155ransferEventResp{
-					NetworkID:       c.ChainID(),
+					NetworkID:       chainId,
 					TxHash:          log.TxHash.Hex(),
 					ContractAddress: logParsed.Raw.Address.Hex(),
 					Timestamp:       blockTime,

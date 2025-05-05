@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+      - PORT=80
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    extra_hosts:
+      - "localmodel:host-gateway"

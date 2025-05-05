@@ -123,6 +123,19 @@ func (s *Service) TweetIsMentionNBS(tweets twitter.TweetObj, username string) (s
 	return fullText, false
 }
 
+func (s *Service) TweetGetFullText(tweets twitter.TweetObj) string {
+	fullText := tweets.NoteTweet.Text
+	if fullText == "" {
+		fullText = tweets.Text
+	}
+
+	for _, item := range tweets.Entities.Mentions {
+		fullText = strings.ReplaceAll(fullText, fmt.Sprintf("@%s", item.UserName), "")
+	}
+
+	return fullText
+}
+
 func (s *Service) CheckTwitterPostForTA(tx *gorm.DB, agentInfoID uint, twitterUsername string, tweetMentions *twitter.UserTimeline) error {
 	if tweetMentions != nil {
 		agentInfo, err := s.dao.FirstAgentInfoByID(

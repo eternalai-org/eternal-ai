@@ -4,37 +4,29 @@ const typescript = require('@rollup/plugin-typescript');
 const { terser } = require('rollup-plugin-terser');
 const pkg = require('./package.json');
 
+const json = require('@rollup/plugin-json');
+const builtins = require('rollup-plugin-node-builtins');
+const globals = require('rollup-plugin-node-globals');
+const inject = require('@rollup/plugin-inject');
+
 module.exports = {
-  input: 'src/index.ts',
+  input: ['./src/index.ts'],
   output: [
     {
-      file: pkg.main,
+      dir: 'dist',
       format: 'cjs',
-      sourcemap: true,
-    },
-    {
-      file: pkg.module,
-      format: 'es',
-      sourcemap: true,
-    },
-    {
-      file: 'dist/bundle.iife.js',
-      format: 'iife',
-      name: 'Core',
-      sourcemap: true,
-    },
-    {
-      file: 'dist/bundle.umd.js',
-      format: 'umd',
-      name: 'Core',
       sourcemap: true,
     },
   ],
   plugins: [
-    resolve(),
+    resolve({}),
+    inject({}),
     commonjs(),
-    typescript({ tsconfig: './tsconfig.json' }),
+    globals(),
+    builtins(),
+    typescript({ tsconfig: './build.tsconfig.json' }),
     terser(),
+    json(),
   ],
-  external: Object.keys(pkg.peerDependencies || {}),
+  external: [...Object.keys(pkg.peerDependencies || {}), 'ethers'],
 };

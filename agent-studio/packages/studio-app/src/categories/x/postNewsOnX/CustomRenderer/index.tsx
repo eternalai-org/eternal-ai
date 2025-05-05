@@ -27,7 +27,6 @@ const CustomPostNewsOnXRenderer = ({
   const { frequency, details, topics, model } = formData;
 
   const [topic, setTopic] = useState("");
-  console.log("🚀 ~ topic:", topic);
 
   const { setSimulatePrompt, simulatePrompt } = useStudioAgentStore();
   const node = useDetectChainIdForMissionModel(id);
