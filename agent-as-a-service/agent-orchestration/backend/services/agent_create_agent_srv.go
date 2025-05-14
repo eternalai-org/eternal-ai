@@ -533,8 +533,8 @@ func (s *Service) HandleGenerateVideoWithSpecificTweet(tx *gorm.DB, handleReques
 			tweetParseInfo.GenerateVideoContent = *handleRequest.PromptToHandle
 		}
 	}
-
-	if tweetParseInfo == nil || tweetParseInfo.IsGenerateVideo == false {
+	// stop support llm detect create video
+	/*if tweetParseInfo == nil || tweetParseInfo.IsGenerateVideo == false {
 		if s.conf.DetectVideoLLMVersion == "v2" {
 			tweetParseInfo, err = s.ValidateTweetContentGenerateVideoWithLLM2(context.Background(), fullText)
 		} else {
@@ -543,7 +543,7 @@ func (s *Service) HandleGenerateVideoWithSpecificTweet(tx *gorm.DB, handleReques
 		if err != nil {
 			return nil, err
 		}
-	}
+	}*/
 	if tweetParseInfo == nil || tweetParseInfo.IsGenerateVideo == false {
 		s.SendTeleVideoActivitiesAlert(fmt.Sprintf("[FAIL_SYNTAX] a requirement gen fail syntax tw_id=%v, tw_user=%v,  full_text:%v ",
 			tweetId, v.User.UserName, fullText), s.conf.VideoFailSyntaxTelegramAlert)
