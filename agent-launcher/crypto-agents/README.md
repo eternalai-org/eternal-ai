@@ -1,6 +1,6 @@
-# Vibe - AI Agent Examples 🤖
+# CryptoAgent Examples 🤖
 
-Welcome to the Vibe AI Agent Examples repository! This collection showcases how to build and integrate AI agents with Vibe Desktop Apps using various programming languages.
+Welcome to the Crypto  Agent  AI Agent Examples repository! This collection showcases how to build and integrate AI agents with Crypto  Agent  Desktop Apps using various programming languages.
 
 ## 📚 Table of Contents
 
@@ -11,7 +11,7 @@ Welcome to the Vibe AI Agent Examples repository! This collection showcases how 
 
 ## Introduction
 
-Vibe Agent is a powerful framework for building AI agents that can be integrated with Vibe Desktop Apps. These agents can perform various tasks, from social media interactions to complex data processing, all while maintaining secure authentication and robust error handling.
+CryptoAgent is a powerful framework for building AI agents that can be integrated with CryptoAgent  Desktop Apps. These agents can perform various tasks, from social media interactions to complex data processing, all while maintaining secure authentication and robust error handling.
 
 ## Available Agents
 
@@ -31,11 +31,11 @@ Vibe Agent is a powerful framework for building AI agents that can be integrated
 
 ## 🚀 Getting Started
 
-Each example demonstrates different capabilities of AI agents that can be integrated with Vibe Desktop Apps. Choose your preferred example and follow the setup instructions in the respective directory.
+Each example demonstrates different capabilities of AI agents that can be integrated with CryptoAgent  Desktop Apps. Choose your preferred example and follow the setup instructions in the respective directory.
 
 ### Prerequisites
 
-- Vibe Desktop App installed
+- CryptoAgent  Desktop App installed
 - Node.js (for JavaScript/TypeScript examples)
 - Python 3.x (for Python examples)
 
