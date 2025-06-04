@@ -793,5 +793,3 @@ async def run_query(req: QueryInputSchema) -> List[QueryResult]:
         )
         for hit in hits
     ]
-
-    

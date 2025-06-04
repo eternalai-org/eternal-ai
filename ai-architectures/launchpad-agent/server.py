@@ -9,14 +9,27 @@ from typing import Callable
 import time
 import logging
 
-logging_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logging_fmt = "%(asctime)s - %(message)s"
 logging.basicConfig(level=logging.INFO, format=logging_fmt)
 logger = logging.getLogger(__name__)
 
 async def lifespan(app: fastapi.FastAPI):
-    yield
+    host, port = os.getenv("HOST", "0.0.0.0"), os.getenv("PORT", 80)
+    logger.info(f"Starting server at {host}:{port}")
+
+    try:
+        yield
+
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        raise e
+
+    finally:
+        logger.info("Shutting down server")
 
 def main():
+    host, port = os.getenv("HOST", "0.0.0.0"), os.getenv("PORT", 80)
+
     server_app = fastapi.FastAPI(
         lifespan=lifespan
     )
@@ -40,8 +53,8 @@ def main():
         start_time = time.time()
         response: Response = await call_next(request)
 
-        if request.url.path.startswith(api_router.prefix):
-            logger.info(f"{request.method} - {request.url.path} - {time.time() - start_time} seconds - {response.status_code}")
+        if request.url.path.startswith((api_router.prefix, )):
+            logger.info(f"{request.method} - {request.url.path} - {time.time() - start_time:.4f} seconds - {response.status_code}")
 
         return response
 
@@ -51,10 +64,11 @@ def main():
     config = uvicorn.Config(
         server_app,
         loop=event_loop,
-        host=os.getenv("HOST", "0.0.0.0"),
-        port=int(os.getenv("PORT", "80")),
-        log_level="error",
+        host=host,
+        port=port,
+        log_level="warning",
         timeout_keep_alive=300,
+        workers=32
     )
 
     server = uvicorn.Server(config)

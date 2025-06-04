@@ -37,10 +37,10 @@ class BaseTask(ABC, Generic[T]):
                 task = await self.process_task(task) or task
 
             except Exception as err:
-                traceback.print_exc()
                 task = await a_move_state(
                     task, MissionChainState.ERROR, f"Error: {err}"
                 )
+                traceback.print_exc()
 
             finally:
                 await self.commit_log(task)
