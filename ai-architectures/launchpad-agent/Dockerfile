@@ -4,7 +4,6 @@ workdir /workspace
 copy requirements.txt ./
 run --mount=type=cache,target=/root/.cache/pip python -m pip install -r requirements.txt
 
-copy utils ./utils
 copy app ./app
 copy server.py ./
 

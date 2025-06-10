@@ -1,0 +1,8 @@
+fastapi[standard]
+uvicorn
+pydantic
+python-dotenv
+httpx
+pymongo
+json-repair
+fastmcp
