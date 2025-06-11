@@ -6,3 +6,4 @@ httpx
 pymongo
 json-repair
 fastmcp
+lite-logging-client

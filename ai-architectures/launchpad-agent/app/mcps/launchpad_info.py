@@ -51,3 +51,17 @@ async def get_launchpad_detail(id: str) -> Optional[dict]:
         }
 
     return None
+
+@mcp.tool(
+    name="get_investment_history",
+    description="Get the investment history of a user",
+    annotations={
+        "user_id": "the id of the user"
+    }
+)
+async def get_investment_history(user_id: str):
+    # TODO: implement this
+    return {
+        "user_id": user_id,
+        "investment_history": []
+    }
