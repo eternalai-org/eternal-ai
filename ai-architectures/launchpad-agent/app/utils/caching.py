@@ -82,7 +82,7 @@ def mongo_cache(
                 if datetime.now(timezone.utc) < expires_at:
                     try:
                         data = cached["data"]
-                        logger.info(f"Cache hit for {cache_key!r}")
+                        logger.info(f"Cache hit for {cache_key!r} (collection: {collection_name})")
 
                         if object_builder:
                             return object_builder(data["model_data"])
@@ -152,7 +152,7 @@ def mongo_cache(
                 if datetime.now(timezone.utc) < expires_at:
                     try:
                         data = cached["data"]
-                        logger.info(f"Cache hit for {cache_key!r}")
+                        logger.info(f"Cache hit for {cache_key!r} (collection: {collection_name})")
                         # Handle Pydantic models
                         if object_builder:
                             return object_builder(data["model_data"])

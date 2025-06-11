@@ -100,6 +100,17 @@ class Tweet(BaseModel):
     source: Optional[str] = None
     withheld: Optional[dict[str, Any]] = None
     note_tweet: Optional[dict[str, Any]] = None
+
+class Pagination(BaseModel):
+    oldest_id: str
+    newest_id: str
+    result_count: int
+    next_token: Optional[str] = None
+    previous_token: Optional[str] = None
+
+class TweetPage(BaseModel):
+    data: List[Tweet]
+    meta: Pagination
     
 class ProfilePublicMetrics(BaseModel):
     followers_count: int
@@ -135,5 +146,6 @@ class TwitterUserInfo(BaseModel):
     url: str
     verified: bool = False
     withheld: Optional[dict[str, Any]] = None
-    followers: Optional[List[ConnectionCard]] = None
-    following: Optional[List[ConnectionCard]] = None
+
+    followers: Optional[List[ConnectionCard]] = []
+    following: Optional[List[ConnectionCard]] = []
