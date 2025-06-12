@@ -5,10 +5,7 @@ from app.utils.launchpad_api_calls import (
 )
 from typing import List, Optional
 
-mcp = FastMCP(
-    name="launchpad_info",
-    description="Explore launchpad projects",
-)
+mcp = FastMCP(name="launchpad_info")
 
 @mcp.tool(
     name="search_launchpad", 

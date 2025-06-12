@@ -7,10 +7,7 @@ from app.utils.twitter_api_calls import (
 )
 from typing import List, Optional
 
-mcp = FastMCP(
-    name="twitter_info",
-    description="Explore twitter profiles",
-)
+mcp = FastMCP(name="twitter_info")
 
 @mcp.tool(
     name="get_twitter_user_info_by_id",

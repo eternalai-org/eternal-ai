@@ -10,15 +10,10 @@ from ..mcps.utils import (
 from mcp.types import TextContent, EmbeddedResource
 import json
 import openai
-from lite_logging import async_log, ContentType
-import asyncio
-
-LOGGING_ROOM = "launchpad:mcp_agent"
 
 async def mcp_agent_run(
     messages: list[dict[str, str]],
     mcp: fastmcp.FastMCP,
-    response_uuid: str,
     max_calls: int = 25,
     **kwargs
 ) -> str:
@@ -26,15 +21,6 @@ async def mcp_agent_run(
 
     tools = await mcp._mcp_list_tools()
     oai_tools = convert_mcp_tools_to_openai_format(tools)
-
-    asyncio.create_task(
-        async_log(
-            json.dumps(messages),
-            tags=["input-message", response_uuid],
-            channel=LOGGING_ROOM,
-            content_type=ContentType.JSON
-        )
-    )
 
     completion = await client.chat.completions.create(
         model=get_model_id(),
@@ -45,15 +31,6 @@ async def mcp_agent_run(
 
     messages.append(await refine_assistant_message(completion.choices[0].message.model_dump()))
     
-    asyncio.create_task(
-        async_log(
-            completion.choices[0].message.model_dump_json(),
-            tags=["output-message", response_uuid],
-            channel=LOGGING_ROOM,
-            content_type=ContentType.JSON
-        )
-    )
-
     n_calls = 0
     
     while completion.choices[0].message.tool_calls is not None \
@@ -67,14 +44,6 @@ async def mcp_agent_run(
 
             result = await execute_openai_compatible_toolcall(_name, _args, mcp)
             
-            asyncio.create_task(
-                async_log(
-                    f"Calling tool {_name} with args {_args}; result: {[r.model_dump_json() for r in result]}",
-                    tags=["tool-call", response_uuid],
-                    channel=LOGGING_ROOM
-                )
-            )
-
             result = [
                 r for r in result
                 if isinstance(r, (TextContent, EmbeddedResource))
@@ -96,14 +65,5 @@ async def mcp_agent_run(
         )
 
         messages.append(await refine_assistant_message(completion.choices[0].message.model_dump()))
-
-        asyncio.create_task(
-            async_log(
-                completion.choices[0].message.model_dump_json(),
-                tags=["output-message", response_uuid],
-                channel=LOGGING_ROOM,
-                content_type=ContentType.JSON
-            )
-        )
 
     return completion.choices[0].message.content
