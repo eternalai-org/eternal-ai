@@ -4,14 +4,16 @@ from typing import List
 import os
 import httpx
 from app.schemas import commons, launchpad
+from app.config import settings
 
-LAUNCHPAD_API_URL = os.getenv("LAUNCHPAD_API_URL")
-LAUNCHPAD_API_KEY = os.getenv("LAUNCHPAD_API_KEY", "super-secret")
+LAUNCHPAD_API_URL = settings.launchpad_api_url
+LAUNCHPAD_API_KEY = settings.launchpad_api_key
 
 TIMEOUT_CFG = httpx.Timeout(60.0, connect=10.0) 
 
 async def search_launchpad(
     query: str,
+    network_id: str,
     launchpad_base_url: str = LAUNCHPAD_API_URL,
     launchpad_api_key: str = LAUNCHPAD_API_KEY,
 ) -> commons.ResponseMessage[List[launchpad.Launchpad]]:
@@ -26,7 +28,7 @@ async def search_launchpad(
         timeout=TIMEOUT_CFG,
     ) as client:
         try:
-            resp = await client.get(url, params={"search": query}) 
+            resp = await client.get(url, params={"search": query, "network_id": network_id}) 
         except Exception as e:
             return response_model(
                 status=commons.APIStatus.ERROR, 
@@ -67,6 +69,7 @@ async def search_launchpad(
 
 async def get_launchpad_detail(
     launchpad_id: str,
+    network_id: str,
     launchpad_base_url: str = LAUNCHPAD_API_URL,
     launchpad_api_key: str = LAUNCHPAD_API_KEY,
 ) -> commons.ResponseMessage[launchpad.Launchpad]:
@@ -81,7 +84,7 @@ async def get_launchpad_detail(
         timeout=TIMEOUT_CFG,
     ) as client:
         try:
-            resp = await client.get(url)
+            resp = await client.get(url, params={"network_id": network_id})
         except Exception as e:
             return response_model(
                 status=commons.APIStatus.ERROR, 
@@ -110,6 +113,66 @@ async def get_launchpad_detail(
                 result=result
             )
 
+        except Exception as e:
+            return response_model(
+                status=commons.APIStatus.ERROR, 
+                error=str(e)
+            )
+
+async def join_launchpad(
+    launchpad_id: str,
+    network_id: str,
+    twitter_id: str,
+    max_cap: str,
+    tweet_id: str,
+    tweet_content: str,
+    launchpad_base_url: str = LAUNCHPAD_API_URL,
+    launchpad_api_key: str = LAUNCHPAD_API_KEY,
+) -> commons.ResponseMessage[launchpad.LaunchpadDepositInfo]:
+    response_model = commons.ResponseMessage[launchpad.LaunchpadDepositInfo]
+    url = f"{launchpad_base_url}/join"
+
+    async with httpx.AsyncClient(
+        base_url=launchpad_base_url,
+        headers={
+            "Authorization": f"Bearer {launchpad_api_key}"
+        },
+        timeout=TIMEOUT_CFG,
+    ) as client:
+        try:
+            resp = await client.post(url, json={
+                "launchpad_id": launchpad_id,
+                "twitter_id": twitter_id,
+                "max_cap": max_cap,
+                "tweet_id": tweet_id,
+                "tweet_content": tweet_content,
+                "network_id": network_id
+            })
+        except Exception as e:
+            return response_model(
+                status=commons.APIStatus.ERROR, 
+                error=str(e)
+            )
+  
+        if resp.status_code != 200:
+            return response_model(
+                status=commons.APIStatus.ERROR, 
+                error=resp.text
+            )
+
+        resp_json = resp.json()
+
+        if 'result' not in resp_json:
+            return response_model(
+                status=commons.APIStatus.ERROR, 
+                error="No result found"
+            )
+
+        try:
+            return response_model(
+                status=commons.APIStatus.OK,
+                result=launchpad.LaunchpadDepositInfo.model_validate(resp_json)
+            )
         except Exception as e:
             return response_model(
                 status=commons.APIStatus.ERROR, 

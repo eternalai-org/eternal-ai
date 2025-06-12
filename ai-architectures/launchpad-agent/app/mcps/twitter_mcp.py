@@ -9,6 +9,22 @@ from typing import List, Optional
 
 mcp = FastMCP(name="twitter_info")
 
+async def _get_twitter_user_info_by_id(user_id: str) -> Optional[dict]:
+    req = await get_twitter_user_info_by_id_api(user_id)
+    result = req.result
+
+    if result is None:
+        return None
+
+    return {
+        "id": result.id,
+        "username": result.username,
+        "name": result.name,
+        "description": result.description,
+        "metrics": result.public_metrics.model_dump(mode="json"),
+        "verified": result.verified
+    }
+
 @mcp.tool(
     name="get_twitter_user_info_by_id",
     description="Get the info of a twitter user by id",
@@ -17,11 +33,14 @@ mcp = FastMCP(name="twitter_info")
     }
 )
 async def get_twitter_user_info_by_id(user_id: str) -> Optional[dict]:
-    req = await get_twitter_user_info_by_id_api(user_id)
+    return await _get_twitter_user_info_by_id(user_id)
+
+async def _get_twitter_user_info_by_username(username: str) -> Optional[dict]:
+    req = await get_twitter_user_info_by_username_api(username)
     result = req.result
 
     if result is None:
-        return f"Failed to get twitter user info for id {user_id!r}; Details: {req.error}"
+        return f"Failed to get twitter user info for username {username!r}; Details: {req.error}"
 
     return {
         "id": result.id,
@@ -41,36 +60,20 @@ async def get_twitter_user_info_by_id(user_id: str) -> Optional[dict]:
     }
 )
 async def get_twitter_user_info_by_username(username: str) -> Optional[dict]:
-    req = await get_twitter_user_info_by_username_api(username)
-    result = req.result
-
-    if result is None:
-        return f"Failed to get twitter user info for username {username!r}; Details: {req.error}"
-
-    return {
-        "id": result.id,
-        "username": result.username,
-        "name": result.name,
-        "description": result.description,
-        "metrics": result.public_metrics.model_dump(mode="json"),
-        "verified": result.verified
-    }
+    return await _get_twitter_user_info_by_username(username)
 
 
-@mcp.tool(
-    name="list_tweets_of_user",
-    description="List the tweets of a twitter user. Use the pagination_token to get the next page of tweets if it presents.",
-    annotations={
-        "user_id": "the id of the twitter user",
-        "pagination_token": "the token to paginate the tweets, leave empty to get the first page (latest tweets)"
-    }
-)
-async def list_tweets_of_user(user_id: str, pagination_token: str = "") -> Optional[dict]:
+
+async def _list_tweets_of_user(user_id: str, pagination_token: str = "") -> Optional[dict]:
     req =  await list_tweets_of_user_api(user_id, pagination_token)
     result = req.result
 
     if result is None:
-        return f"Failed to get tweets of profile id {user_id!r}; Details: {req.error}"
+        return {
+            "tweets": [],
+            "pagination_token": "",
+            "count": 0,
+        }
 
     tweets = [
         {
@@ -92,20 +95,24 @@ async def list_tweets_of_user(user_id: str, pagination_token: str = "") -> Optio
         "pagination_token": pagination_token,
         "count": result.meta.result_count,
     }
-
+    
 @mcp.tool(
-    name="get_tweet_info",
-    description="Get the info of a tweet by id",
+    name="list_tweets_of_user",
+    description="List the tweets of a twitter user. Use the pagination_token to get the next page of tweets if it presents.",
     annotations={
-        "tweet_id": "the id of the tweet"
+        "user_id": "the id of the twitter user",
+        "pagination_token": "the token to paginate the tweets, leave empty to get the first page (latest tweets)"
     }
 )
-async def get_tweet_info(tweet_id: str) -> Optional[dict]:
+async def list_tweets_of_user(user_id: str, pagination_token: str = "") -> Optional[dict]:
+    return await _list_tweets_of_user(user_id, pagination_token)
+
+async def _get_tweet_info(tweet_id: str) -> Optional[dict]:
     req = await get_tweet_info_api(tweet_id)
     result = req.result
 
     if result is None:
-        return f"Failed to get tweet info for id {tweet_id!r}; Details: {req.error}"
+        return None
 
     return {
         "id": result.id,
@@ -116,3 +123,14 @@ async def get_tweet_info(tweet_id: str) -> Optional[dict]:
         "referenced_tweets": result.referenced_tweets,
         "author_id": result.author_id,
     }
+    
+
+@mcp.tool(
+    name="get_tweet_info",
+    description="Get the info of a tweet by id",
+    annotations={
+        "tweet_id": "the id of the tweet"
+    }
+)
+async def get_tweet_info(tweet_id: str) -> Optional[dict]:
+    return await _get_tweet_info(tweet_id)

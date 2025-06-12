@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Literal
 
 CURRENCY_UNIT = "EAI"
 
@@ -33,3 +34,8 @@ class Launchpad(BaseModel):
     end_tweet_id: str
     price_usd: str
     market_cap_usd: str
+
+
+class LaunchpadDepositInfo(BaseModel):
+    status: Literal["pending", "success", "failed"]
+    eth_address: str

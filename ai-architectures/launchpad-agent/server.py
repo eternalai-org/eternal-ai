@@ -2,7 +2,7 @@ import fastapi
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import asyncio
-import os
+from app.config import settings
 from app.apis import router as api_router
 from fastapi import Request, Response
 from typing import Callable
@@ -14,8 +14,7 @@ logging.basicConfig(level=logging.INFO, format=logging_fmt)
 logger = logging.getLogger(__name__)
 
 async def lifespan(app: fastapi.FastAPI):
-    host, port = os.getenv("HOST", "0.0.0.0"), os.getenv("PORT", 80)
-    logger.info(f"Starting server at {host}:{port}")
+    logger.info(f"Starting Launchpad Agent server at {settings.host}:{settings.port}")
 
     try:
         yield
@@ -28,7 +27,6 @@ async def lifespan(app: fastapi.FastAPI):
         logger.info("Shutting down server")
 
 def main():
-    host, port = os.getenv("HOST", "0.0.0.0"), os.getenv("PORT", 80)
 
     server_app = fastapi.FastAPI(
         lifespan=lifespan
@@ -64,8 +62,8 @@ def main():
     config = uvicorn.Config(
         server_app,
         loop=event_loop,
-        host=host,
-        port=port,
+        host=settings.host,
+        port=settings.port,
         log_level="warning",
         timeout_keep_alive=300,
         workers=32

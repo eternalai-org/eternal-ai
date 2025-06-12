@@ -1,8 +1,9 @@
 from pymongo import MongoClient
 from functools import lru_cache
 import os
+from app.config import settings
 
-MONGO_URI = os.getenv("MONGO_URI")
+MONGO_URI = settings.mongo_uri
 
 POOL_CONFIGURATIONS = {
     "maxPoolSize": 32,
@@ -12,7 +13,7 @@ POOL_CONFIGURATIONS = {
     "serverSelectionTimeoutMS": 5000
 }
 
-SERVICE_PREFIX = os.getenv("SERVICE_PREFIX", "launchpad-agent")
+SERVICE_PREFIX = settings.service_prefix
 
 @lru_cache(maxsize=1)
 def get_mongodb_client():

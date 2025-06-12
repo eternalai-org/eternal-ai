@@ -8,11 +8,12 @@ from app.schemas import (
 from pydantic import ValidationError
 from app.utils.caching import mongo_cache, set_cache_value, get_cached_value, delete_cached_value
 import logging
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-TWITTER_API_URL = os.getenv("TWITTER_API_URL")
-TWITTER_API_KEY = os.getenv("TWITTER_API_KEY")
+TWITTER_API_URL = settings.twitter_api_url
+TWITTER_API_KEY = settings.twitter_api_key
 TWITTER_USERNAME_TO_ID = "twitter_username_to_id"
 # key builders
 TIMEOUT_CFG = httpx.Timeout(60.0, connect=10.0) 
@@ -443,3 +444,16 @@ async def build_twitter_social_graph(
         k: list(v)
         for k, v in graph.items()
     }
+
+
+async def reply_to_tweet(
+    tweet_id: str,
+    tweet_content: str,
+    identification: dict,
+    twitter_api_base_url: str = TWITTER_API_URL,
+    twitter_api_key: str = TWITTER_API_KEY,
+) -> commons.ResponseMessage[twitter.Tweet]:
+    response_model = commons.ResponseMessage[twitter.Tweet]
+    url = f"{twitter_api_base_url}/tweets/{tweet_id}/reply"
+    
+    

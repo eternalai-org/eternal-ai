@@ -7,3 +7,4 @@ class EvaluationRequest(BaseModel):
     tweet_content: str
     original_tweet: str
     launchpad_id: Optional[str] = None
+    network_id: str = "11155111"
