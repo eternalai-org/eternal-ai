@@ -10,10 +10,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-async def pipeline():
-    pass
-
-async def evaluate_tweet(request: EvaluationRequest):
+async def evaluate(request: EvaluationRequest):
     """Complete tweet evaluation pipeline"""
     
     start_time = time.time()
@@ -129,3 +126,7 @@ async def store_evaluation_result(result: EvaluationResult):
         
     except Exception as e:
         logger.error(f"Error storing evaluation result for {result.tweet_id}: {e}", exc_info=True)
+        
+async def congrats_investor(request: EvaluationRequest):
+    """Congrats the investor for their investment"""
+    

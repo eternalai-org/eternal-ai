@@ -4,7 +4,7 @@ import logging
 from .schemas.services import EvaluationRequest
 from .schemas.commons import ResponseMessage
 from .schemas.evaluation import EvaluationResult, InvestorProfile, InvestorGrade
-from .handlers import evaluate_tweet
+from .handlers import evaluate
 from .utils.mongodb import get_mongo_database
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api")
 @router.post("/evaluate")
 async def evaluate(request: EvaluationRequest, background_tasks: BackgroundTasks) -> ResponseMessage[str]:
     """Submit a tweet for evaluation"""
-    background_tasks.add_task(evaluate_tweet, request)
+    background_tasks.add_task(evaluate, request)
     return ResponseMessage[str](
         status="success",
         result=f"Evaluation request received (tweet-id: {request.tweet_id})",

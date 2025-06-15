@@ -1,4 +1,3 @@
-from functools import lru_cache
 from app.schemas import launchpad, commons
 from typing import List
 import os
@@ -178,3 +177,103 @@ async def join_launchpad(
                 status=commons.APIStatus.ERROR, 
                 error=str(e)
             )
+
+async def get_investment_history(
+    twitter_id: str,
+    network_id: str,
+    launchpad_base_url: str = LAUNCHPAD_API_URL,
+    launchpad_api_key: str = LAUNCHPAD_API_KEY,
+) -> commons.ResponseMessage[List[launchpad.Launchpad]]:
+    response_model = commons.ResponseMessage[List[launchpad.Launchpad]]
+    url = f"{launchpad_base_url}/investment-history"
+
+    async with httpx.AsyncClient(
+        base_url=launchpad_base_url,
+        headers={
+            "Authorization": f"Bearer {launchpad_api_key}",
+        },
+        timeout=TIMEOUT_CFG,
+    ) as client:
+        try:
+            resp = await client.get(
+                url, 
+                params={
+                    "twitter_id": twitter_id, 
+                    "network_id": network_id
+                }
+            )
+        except Exception as e:
+            return response_model(
+                status=commons.APIStatus.ERROR, 
+                error=str(e)
+            )
+            
+        if resp.status_code != 200:
+            return response_model(
+                status=commons.APIStatus.ERROR, 
+                error=resp.text
+            )
+            
+        resp_json = resp.json()
+        
+        if 'result' not in resp_json:
+            return response_model(
+                status=commons.APIStatus.ERROR, 
+                error="No result found"
+            )
+            
+        try:
+            result = [
+                launchpad.Launchpad.model_validate(item)
+                for item in resp_json['result']
+            ]
+
+            return response_model(
+                status=commons.APIStatus.OK,
+                result=result
+            )
+        except Exception as e:
+            return response_model(
+                status=commons.APIStatus.ERROR, 
+                error=str(e)
+            )
+
+async def reply(
+    tweet_id: str,
+    content: str,
+    launchpad_base_url: str = LAUNCHPAD_API_URL,
+    launchpad_api_key: str = LAUNCHPAD_API_KEY,
+) -> commons.ResponseMessage[bool]:
+    response_model = commons.ResponseMessage[bool]
+    url = f"{launchpad_base_url}/reply-tweet"
+
+    async with httpx.AsyncClient(
+        base_url=launchpad_base_url,
+        headers={
+            "Authorization": f"Bearer {launchpad_api_key}"
+        },
+        timeout=TIMEOUT_CFG,
+    ) as client:
+        try:
+            resp = await client.post(url, json={
+                "reply_tweet_id": tweet_id,
+                "content": content
+            })
+        except Exception as e:
+            return response_model(
+                result=False,
+                status=commons.APIStatus.ERROR, 
+                error=str(e)
+            )
+            
+        if resp.status_code != 200:
+            return response_model(
+                result=False,
+                status=commons.APIStatus.ERROR, 
+                error=resp.text
+            )
+
+        return response_model(
+            result=True,
+            status=commons.APIStatus.OK,
+        )

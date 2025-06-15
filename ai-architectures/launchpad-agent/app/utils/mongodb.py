@@ -1,6 +1,5 @@
 from pymongo import MongoClient
 from functools import lru_cache
-import os
 from app.config import settings
 
 MONGO_URI = settings.mongo_uri

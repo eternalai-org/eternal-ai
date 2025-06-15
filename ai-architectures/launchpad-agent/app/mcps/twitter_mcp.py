@@ -4,6 +4,7 @@ from app.utils.twitter_api_calls import (
     list_tweets_of_user as list_tweets_of_user_api,
     get_tweet_info as get_tweet_info_api,
     get_twitter_user_info_by_username as get_twitter_user_info_by_username_api,
+    get_tweet_threads_by_id as get_tweet_threads_by_id_api,
 )
 from typing import List, Optional
 
@@ -134,3 +135,23 @@ async def _get_tweet_info(tweet_id: str) -> Optional[dict]:
 )
 async def get_tweet_info(tweet_id: str) -> Optional[dict]:
     return await _get_tweet_info(tweet_id)
+
+async def _get_tweet_threads_by_id(user_id: str) -> Optional[dict]:
+    req = await get_tweet_threads_by_id_api(user_id)
+    result = req.result
+
+    if result is None:
+        return None
+
+    return result
+
+
+@mcp.tool(
+    name="get_tweet_threads_by_id",
+    description="Get the threads of a tweet by id",
+    annotations={
+        "user_id": "the id of the twitter user"
+    }
+)
+async def get_tweet_threads_by_id(user_id: str) -> Optional[dict]:
+    return await _get_tweet_threads_by_id(user_id)

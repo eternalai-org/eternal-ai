@@ -445,15 +445,68 @@ async def build_twitter_social_graph(
         for k, v in graph.items()
     }
 
+from app.utils.misc import dsu
 
-async def reply_to_tweet(
-    tweet_id: str,
-    tweet_content: str,
-    identification: dict,
+async def get_tweet_threads_by_id(
+    user_id: str,
+    max_calls: int = 5,
     twitter_api_base_url: str = TWITTER_API_URL,
     twitter_api_key: str = TWITTER_API_KEY,
-) -> commons.ResponseMessage[twitter.Tweet]:
-    response_model = commons.ResponseMessage[twitter.Tweet]
-    url = f"{twitter_api_base_url}/tweets/{tweet_id}/reply"
-    
+) -> commons.ResponseMessage[dict[str, list[twitter.Tweet]]]:
+
+    response_model = commons.ResponseMessage[dict[str, list[twitter.Tweet]]]
+    tweets: list[twitter.Tweet] = []
+
+    current_page = ""
+
+    for i in range(max_calls):
+        req = await list_tweets_of_user(
+            user_id, 
+            pagination_token=current_page,
+            twitter_api_base_url=twitter_api_base_url,
+            twitter_api_key=twitter_api_key
+        ) 
+
+        if req.result is None:
+            logger.error(f"Error getting tweets for {user_id}: {req.error}")
+            break
+
+        tweets.extend(req.result.data)
+        next_page = req.result.meta.next_token
+
+        if current_page == next_page or next_page == "":
+            break
+
+        current_page = next_page
+
+    map_idx = {
+        val.id: i
+        for i, val in enumerate(tweets)
+    }
+
+    relations = []
+
+    for i, tweet in enumerate(tweets):
+        for ref in (tweet.referenced_tweets or []):
+            _type, _id = ref.get('type'), ref.get('id')
+
+            if _type == "replied_to" and _id in map_idx:
+                relations.append((map_idx[_id], i))
+
+    parent = dsu(len(tweets), relations)
+    unique_threads = set(parent)
+
+    threads: dict[str, list[twitter.Tweet]] = {}
+
+    for thread in unique_threads:
+        threads[thread] = [
+            tweets[i]
+            for i in range(len(tweets))
+            if parent[i] == thread
+        ]
+
+    for thread in threads:
+        threads[thread].sort(key=lambda x: x.created_timestamp)
+
+    return response_model(result=threads)
     

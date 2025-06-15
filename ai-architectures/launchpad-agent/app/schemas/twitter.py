@@ -1,5 +1,6 @@
 from pydantic import BaseModel, fields
 from typing import Optional, List, Any
+from datetime import datetime
 
 class TweetAttachment(BaseModel):
     media_keys: Optional[List[str]] = None
@@ -100,6 +101,13 @@ class Tweet(BaseModel):
     source: Optional[str] = None
     withheld: Optional[dict[str, Any]] = None
     note_tweet: Optional[dict[str, Any]] = None
+
+    @property
+    def created_timestamp(self) -> int:
+        try:
+            return int(datetime.strptime(self.created_at, "%Y-%m-%dT%H:%M:%S.%fZ").timestamp())
+        except Exception as e:
+            return 0
 
 class Pagination(BaseModel):
     oldest_id: str

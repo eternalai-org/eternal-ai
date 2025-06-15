@@ -6,7 +6,7 @@ from app.schemas.evaluation import (
     InvestmentBehavior, SocialMetrics
 )
 from app.utils.lm import get_oai_async_client, get_model_id
-from app.utils.msic import float_clamp
+from app.utils.misc import float_clamp
 import logging
 
 logger = logging.getLogger(__name__)
@@ -51,11 +51,52 @@ async def analyze_investor_profile(
     except Exception as e:
         logger.error(f"Error analyzing investor {user_id}: {e}")
         return _create_error_profile(user_id, str(e))
+    
+from app.schemas.twitter import Tweet
+async def summarize_thread(tweets: list[Tweet]) -> str:
+    fmt_content = ""
+
+    for tweet in tweets:
+        fmt_content += f"{tweet.text}\n"
+
+    system_prompt = """
+You are a helpful assistant that summarizes a thread of tweets.
+"""
+
+    user_prompt = f"""
+Here is the thread of tweets:
+{fmt_content}
+
+Your task now is to summarize the thread of tweets into a single tweet. The summarization should contain the following information:
+- The main idea, topic of the thread
+- The key points of the thread
+- The main conclusion of the thread
+- The main recommendation of the thread, if any
+- The main action items of the thread, if any
+- The main risks of the thread, if any
+
+Write the summary in short and concise manner.
+"""
+
+    client = get_oai_async_client()
+    model = get_model_id()
+
+    response = await client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        temperature=0.3,
+        max_tokens=1024
+    )
+
+    return response.choices[0].message.content
 
 async def gather_social_data(user_id: str) -> Dict[str, Any]:
     """Collect social media data"""
     try:
-        from app.mcps.twitter_mcp import _get_twitter_user_info_by_id, _list_tweets_of_user
+        from app.mcps.twitter_mcp import _get_twitter_user_info_by_id, _list_tweets_of_user, _get_tweet_threads_by_id
 
         # Get profile
         profile_result = await _get_twitter_user_info_by_id(user_id)
@@ -63,22 +104,24 @@ async def gather_social_data(user_id: str) -> Dict[str, Any]:
         if profile_result is None:
             return {"profile": None, "tweets": []}
      
-        tweets = []
-        current_page_token = ""
+        threads = await _get_tweet_threads_by_id(user_id)
+        tweets: list[Tweet] = []
+        summary_tweet_content: Dict[str, str] = {}
 
-        for i in range(10):
-            tweets_result = await _list_tweets_of_user(user_id, current_page_token)
-            tweets = tweets_result.get('tweets', []) if tweets_result else []
+        for thread_parent, thread_tweets in threads.items():
+            tweets.extend(thread_tweets)
 
-            if current_page_token == tweets_result.get('pagination_token', ""):
-                break
+            if len(thread_tweets) > 1:
+                summary_tweet_content[thread_parent] = await summarize_thread(thread_tweets)
 
-            current_page_token = tweets_result.get('pagination_token', "")
-            tweets.extend(tweets_result.get('tweets', []))
-            
+            elif len(thread_tweets) == 1:
+                summary_tweet_content[thread_parent] = thread_tweets[0].text
+
         return {
             "profile": profile_result,
-            "tweets": tweets
+            "tweets": tweets,
+            "threads": threads,
+            "summary_tweet_content": summary_tweet_content
         }
         
     except Exception as e:
@@ -132,7 +175,7 @@ def analyze_investment_behavior_basic(tweets: List[Dict]) -> InvestmentBehavior:
         portfolio_diversity=0.5
     )
 
-def calculate_social_metrics(profile: Dict[str, Any], tweets: List[Dict]) -> SocialMetrics:
+def calculate_social_metrics(profile: Dict[str, Any], social_posted_content: List[str]) -> SocialMetrics:
     """Calculate basic social metrics"""
     metrics = profile.get("metrics", {})
     
@@ -143,23 +186,32 @@ def calculate_social_metrics(profile: Dict[str, Any], tweets: List[Dict]) -> Soc
         account_age_days=365,  # Default
         engagement_rate=5.0,   # Default
         posting_frequency=1.0, # Default
-        crypto_focus_ratio=_calculate_crypto_focus_ratio(tweets)
+        crypto_focus_ratio=_calculate_content_focus_ratio(social_posted_content)
     )
 
-def _calculate_crypto_focus_ratio(tweets: List[Dict]) -> float:
+def _calculate_content_focus_ratio(social_posted_content: List[str]) -> float:
     """Calculate crypto focus ratio"""
-    if not tweets:
+    if not social_posted_content:
         return 0.0
     
-    crypto_keywords = ['crypto', 'bitcoin', 'ethereum', 'blockchain', 'defi', 'nft', 'web3']
+    crypto_keywords = [
+        'crypto', 'bitcoin', 'ethereum', 
+        'blockchain', 'defi', 'nft',
+        'web3', 'ai', 'artificial', 
+        'intelligence', 'machine', 
+        'learning', 'data', 
+        'science', 'engineering', 
+        'analysis', 'visualization'
+    ]
+
     crypto_tweets = 0
     
-    for tweet in tweets[:20]:
-        text = tweet.get('text', '').lower()
+    for content in social_posted_content:
+        text = content.lower()
         if any(keyword in text for keyword in crypto_keywords):
             crypto_tweets += 1
-    
-    return crypto_tweets / min(len(tweets), 20)
+
+    return crypto_tweets / len(social_posted_content)
 
 def calculate_basic_score(research_interests: List[ResearchInterest], social_metrics: SocialMetrics) -> float:
     """Calculate basic investor score"""
@@ -236,7 +288,16 @@ async def analyze_investor_with_ai(
         model = get_model_id()
         
         # Prepare data for AI analysis
-        tweets_sample = social_data.get("tweets", [])[:50]  # Use recent 10 tweets
+        
+        summary_threads = social_data.get("summary_tweet_content", {})
+
+        summary_tweet_content = ""
+        social_posted_content = []
+        
+        for k, v in summary_threads.items():
+            summary_tweet_content += f"Thread {k}: {v}\n\n"
+            social_posted_content.append(v)
+
         profile = social_data.get("profile", {})
         
         # Get project-specific insights
@@ -258,8 +319,8 @@ You are an expert investment analyst evaluating whether a Twitter user would be 
 - Following: {profile.get('metrics', {}).get('following_count', 0)}
 - Tweet Count: {profile.get('metrics', {}).get('tweet_count', 0)}
 
-## RECENT TWEETS (up to 50):
-{json.dumps([tweet.get('text', '') for tweet in tweets_sample], indent=2)}
+## RECENT POSTED:
+{summary_tweet_content}
 
 ## CANDIDATE TWEET:
 "{tweet_content}"
@@ -317,11 +378,11 @@ Be thorough but concise in your analysis.
                 {"role": "user", "content": analysis_prompt}
             ],
             temperature=0.3,
-            max_tokens=2000
+            max_tokens=2048
         )
-        
+
         ai_result = response.choices[0].message.content
-        
+
         # Parse AI response
         try:
             ai_data = json.loads(ai_result)
@@ -355,8 +416,8 @@ Be thorough but concise in your analysis.
         )
         
         # Calculate social metrics
-        social_metrics = calculate_social_metrics(profile, tweets_sample)
-        
+        social_metrics = calculate_social_metrics(profile, summary_threads.values())
+
         # Map grade string to enum
         grade_str = ai_data.get("grade", "C").upper()
         try:

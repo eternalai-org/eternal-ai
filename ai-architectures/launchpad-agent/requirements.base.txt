@@ -8,3 +8,4 @@ json-repair
 fastmcp
 lite-logging-client
 pydantic-settings
+schedule

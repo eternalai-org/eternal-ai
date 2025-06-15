@@ -1,6 +1,6 @@
 import json
 from typing import Optional, Dict, List, Any
-from app.agents.mcp_agent import mcp_agent_run
+from app.agents.mcp_agent import run_mcp_agent
 from app.schemas.evaluation import ProjectIdentification
 from app.utils.lm import get_oai_async_client, get_model_id
 import logging
@@ -189,6 +189,7 @@ Return a JSON response with this structure:
 }
 
 Matching criteria:
+0. If there is some launchpad_id, launchpadid, project_id, in the tweet, prioritize it. 
 1. Direct project name mentions
 2. Token symbol matches
 3. Technology category alignment

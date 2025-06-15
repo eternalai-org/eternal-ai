@@ -11,7 +11,7 @@ from mcp.types import TextContent, EmbeddedResource
 import json
 import openai
 
-async def mcp_agent_run(
+async def run_mcp_agent(
     messages: list[dict[str, str]],
     mcp: fastmcp.FastMCP,
     max_calls: int = 25,
