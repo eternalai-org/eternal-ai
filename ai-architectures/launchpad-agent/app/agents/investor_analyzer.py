@@ -5,8 +5,9 @@ from app.schemas.evaluation import (
     InvestmentBehavior, SocialMetrics
 )
 from app.utils.lm import get_oai_async_client, get_model_id
-from app.utils.misc import float_clamp
+from app.utils.misc import float_clamp, retry
 import logging
+from json_repair import repair_json
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ async def analyze_investor_profile(
     user_id: str, 
     tweet_content: str, 
     launchpad_id: str,
-    network_id: str = "11155111"
+    network_id: str = "8453"
 ) -> InvestorProfile:
     """
     Stage 3: AI-Enhanced comprehensive analysis of the candidate investor
@@ -27,9 +28,15 @@ async def analyze_investor_profile(
 
         if social_data.get("profile") is None:
             return _create_error_profile(user_id, "Failed to get profile")
-        
+
         # Get project details for context-aware analysis
-        project_details = await get_project_details(launchpad_id, network_id)
+        from app.utils.launchpad_api_calls import get_launchpad_detail
+        req = await get_launchpad_detail(launchpad_id, network_id)
+
+        if req.result is None:
+            return _create_error_profile(user_id, "Failed to get project details")
+
+        project_details = req.result.model_dump()
         
         # Use AI for enhanced analysis
         ai_analysis = await analyze_investor_with_ai(
@@ -42,10 +49,10 @@ async def analyze_investor_profile(
         if ai_analysis:
             # AI analysis succeeded
             return ai_analysis
-        else:
-            # Fallback to basic analysis
-            logger.warning(f"AI analysis failed for {user_id}, falling back to basic analysis")
-            return await analyze_investor_basic(user_id, tweet_content, launchpad_id, social_data)
+
+        # Fallback to basic analysis
+        logger.warning(f"AI analysis failed for {user_id}, falling back to basic analysis")
+        return await analyze_investor_basic(user_id, tweet_content, launchpad_id, social_data)
         
     except Exception as e:
         logger.error(f"Error analyzing investor {user_id}: {e}")
@@ -95,14 +102,14 @@ Write the summary in short and concise manner.
 async def gather_social_data(user_id: str) -> Dict[str, Any]:
     """Collect social media data"""
     try:
-        from app.mcps.twitter_mcp import _get_twitter_user_info_by_id, _list_tweets_of_user, _get_tweet_threads_by_id
+        from app.mcps.twitter_mcp import _get_twitter_user_info_by_id, _get_tweet_threads_by_id
 
         # Get profile
         profile_result = await _get_twitter_user_info_by_id(user_id)
 
         if profile_result is None:
             return {"profile": None, "tweets": []}
-     
+
         threads = await _get_tweet_threads_by_id(user_id)
         tweets: list[Tweet] = []
         summary_tweet_content: Dict[str, str] = {}
@@ -127,7 +134,7 @@ async def gather_social_data(user_id: str) -> Dict[str, Any]:
         logger.error(f"Error gathering social data: {e}")
         return {"profile": {}, "tweets": []}
 
-async def analyze_research_interests(tweets: List[Dict]) -> List[ResearchInterest]:
+async def analyze_research_interests(tweets: List[Tweet]) -> List[ResearchInterest]:
     """Basic research interest analysis"""
     if not tweets:
         return []
@@ -145,22 +152,24 @@ async def analyze_research_interests(tweets: List[Dict]) -> List[ResearchInteres
 
     for category, keywords in categories.items():
         matches = 0
-        total_tweets = min(len(tweets), 20)
-        
-        for tweet in tweets[:total_tweets]:
-            text = tweet.get('text', '').lower()
+
+        for tweet in tweets:
+            text = tweet.text.lower()
+
             if any(keyword in text for keyword in keywords):
                 matches += 1
-        
+
         if matches > 0:
-            confidence = min(matches / total_tweets, 1.0)
-            interests.append(ResearchInterest(
-                category=category,
-                confidence=confidence,
-                evidence_tweets=[str(i) for i in range(min(matches, 3))],
-                technical_depth=confidence * 0.7,  # Estimate technical depth
-                keywords=keywords
-            ))
+            confidence = float_clamp(matches / len(tweets), 0, 1)
+            interests.append(
+                ResearchInterest(
+                    category=category,
+                    confidence=confidence,
+                    evidence_tweets=[str(i) for i in range(min(matches, 3))],
+                    technical_depth=float_clamp(confidence * 0.7, 0, 1),  # Estimate technical depth
+                    keywords=keywords
+                )
+            )
     
     return interests
 
@@ -170,7 +179,7 @@ def analyze_investment_behavior_basic(tweets: List[Dict]) -> InvestmentBehavior:
         risk_tolerance="Moderate",
         investment_size_preference="Medium",
         time_horizon="Medium-term",
-        due_diligence_score=0.6,
+        due_diligence_score=0.5,
         portfolio_diversity=0.5
     )
 
@@ -214,21 +223,27 @@ def _calculate_content_focus_ratio(social_posted_content: List[str]) -> float:
 
 def calculate_basic_score(research_interests: List[ResearchInterest], social_metrics: SocialMetrics) -> float:
     """Calculate basic investor score"""
-    score = 50.0  # Base score
-    
+    score = 40.0  # Base score
+
     # Research interests bonus
     if research_interests:
         avg_confidence = sum(interest.confidence for interest in research_interests) / len(research_interests)
         score += avg_confidence * 20
-    
+
     # Social metrics bonus
-    if social_metrics.followers_count > 1000:
+    if social_metrics.followers_count > 10000:
         score += 10
-    elif social_metrics.followers_count > 100:
+    
+    elif social_metrics.followers_count > 1000:
         score += 5
+    
+    elif social_metrics.followers_count > 100:
+        score += 2
+    
+    elif social_metrics.followers_count > 50:
+        score += 1
 
     score += social_metrics.crypto_focus_ratio * 15
-    
     return float_clamp(score, 0.0, 100.0)
 
 def score_to_grade(score: float) -> InvestorGrade:
@@ -288,16 +303,16 @@ async def analyze_investor_with_ai(
         
         # Prepare data for AI analysis
         
-        summary_threads = social_data.get("summary_tweet_content", {})
+        summary_threads: dict[str, str] = social_data.get("summary_tweet_content", {})
 
         summary_tweet_content = ""
         social_posted_content = []
         
         for k, v in summary_threads.items():
-            summary_tweet_content += f"Thread {k}: {v}\n\n"
+            summary_tweet_content += f"Thread ID: {k}\nSummary: {v}\n\n"
             social_posted_content.append(v)
 
-        profile = social_data.get("profile", {})
+        profile: dict[str, Any] = social_data.get("profile", {})
         
         # Get project-specific insights
         project_insights = await analyze_project_specific_fit(project_details, social_data)
@@ -310,6 +325,8 @@ You are an expert investment analyst evaluating whether a Twitter user would be 
 - ID: {project_details.get('id', 'Unknown')}
 - Name: {project_details.get('name', 'Unknown')}
 - Description: {project_details.get('description', 'No description available')}
+- Ticker: {project_details.get('token_symbol', 'Unknown')}
+- Market Cap: {project_details.get('market_cap_usd', 'Unknown')}
 
 ## INVESTOR PROFILE:
 - Username: {profile.get('username', 'Unknown')}
@@ -366,77 +383,86 @@ Focus on:
 Be thorough but concise in your analysis.
 """
 
-        # Call AI for analysis
-        response = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {
-                    "role": "system", 
-                    "content": "You are an expert blockchain investment analyst. Provide detailed, objective analysis."
-                },
-                {"role": "user", "content": analysis_prompt}
-            ],
-            temperature=0.3,
-            max_tokens=2048
-        )
+        async def wraps():
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": "You are an expert blockchain investment analyst. Provide detailed, objective analysis."
+                    },
+                    {"role": "user", "content": analysis_prompt}
+                ],
+                temperature=0.3,
+                max_tokens=2048
+            )
 
-        ai_result = response.choices[0].message.content
+            ai_result = response.choices[0].message.content
 
-        # Parse AI response
-        try:
-            ai_data = json.loads(ai_result)
-        except json.JSONDecodeError:
-            # Try to extract JSON from response if it's wrapped in markdown or other text
-            import re
-            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', ai_result, re.DOTALL)
-            if json_match:
-                ai_data = json.loads(json_match.group(1))
-            else:
-                logger.error(f"Failed to parse AI response as JSON: {ai_result}...")
-                return None
+            try:
+                repaired_json = repair_json(ai_result)
+                return json.loads(repaired_json)
+ 
+            except json.JSONDecodeError:
+                import re
+                json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', ai_result, re.DOTALL)
+
+                if json_match:
+                    repaired_json = repair_json(json_match.group(1))
+                    return json.loads(repaired_json)
+
+                raise Exception("Failed to parse AI response as JSON")
         
+        ai_data: dict[str, Any] = await retry(wraps, max_retry=3, first_interval=10, interval_multiply=1)()
+
         # Build InvestorProfile from AI analysis
         research_interests = []
         for interest in ai_data.get("research_interests", []):
+
+            if not isinstance(interest, dict):
+                logger.warning(f"Invalid research interest: {interest}")
+                continue
+
             research_interests.append(ResearchInterest(
                 category=interest.get("category", "Unknown"),
-                confidence=interest.get("confidence", 0.5),
+                confidence=float_clamp(interest.get("confidence", 0.5), 0, 1),
                 evidence_tweets=[],  # We could extract specific tweet IDs here
-                technical_depth=interest.get("technical_depth", 0.5),
+                technical_depth=float_clamp(interest.get("technical_depth", 0.5), 0, 1),
                 keywords=[]
             ))
-        
+
         investment_behavior = InvestmentBehavior(
             risk_tolerance=ai_data.get("investment_behavior", {}).get("risk_tolerance", "Moderate"),
             investment_size_preference=ai_data.get("investment_behavior", {}).get("investment_size_preference", "Medium"),
             time_horizon=ai_data.get("investment_behavior", {}).get("time_horizon", "Medium-term"),
-            due_diligence_score=ai_data.get("investment_behavior", {}).get("due_diligence_score", 0.5),
-            portfolio_diversity=ai_data.get("investment_behavior", {}).get("portfolio_diversity", 0.5)
+            due_diligence_score=float_clamp(ai_data.get("investment_behavior", {}).get("due_diligence_score", 0.5), 0, 1),
+            portfolio_diversity=float_clamp(ai_data.get("investment_behavior", {}).get("portfolio_diversity", 0.5), 0, 1)
         )
         
         # Calculate social metrics
-        social_metrics = calculate_social_metrics(profile, summary_threads.values())
+        social_metrics = calculate_social_metrics(profile, list(summary_threads.values()))
 
         # Map grade string to enum
-        grade_str = ai_data.get("grade", "C").upper()
+        grade_str = ai_data.get("grade", "D").upper()
+
         try:
             grade = InvestorGrade(grade_str)
         except ValueError:
-            grade = InvestorGrade.C
+            grade = InvestorGrade.D
         
         return InvestorProfile(
             user_id=user_id,
             username=profile.get("username", "unknown"),
             name=profile.get("name"),
             grade=grade,
-            score=float(ai_data.get("overall_score", 50.0)),
+            score=float_clamp(ai_data.get("overall_score", 50.0), 0, 100),
             research_interests=research_interests,
             investment_behavior=investment_behavior,
             social_metrics=social_metrics,
             risk_factors=ai_data.get("risk_factors", []),
             strengths=ai_data.get("strengths", []),
             reasoning=ai_data.get("reasoning", "AI-powered analysis completed"),
-            project_fit_score=float(ai_data.get("project_fit_score", 0.5))
+            project_fit_score=float_clamp(ai_data.get("project_fit_score", 0.5), 0, 1)
         )
         
     except Exception as e:
@@ -480,27 +506,6 @@ async def analyze_project_specific_fit(project_details: Dict[str, Any], social_d
             insights.append("RELEVANCE: No direct project mentions found in recent tweets")
     
     return "\n".join(insights)
-
-async def get_project_details(launchpad_id: str, network_id: str = "11155111") -> Dict[str, Any]:
-    """Get project details for context-aware analysis"""
-    try:
-        from app.mcps.launchpad_mcp import _get_launchpad_detail_simple
-        result = await _get_launchpad_detail_simple(launchpad_id, network_id)
-
-        if result is not None:
-            return {
-                "id": result.get("id"),
-                "name": result.get("name"),
-                "description": result.get("description")
-            }
-
-        else:
-            logger.warning(f"Could not get project details for {launchpad_id}")
-            return {"id": launchpad_id, "name": "Unknown", "description": "No description available"}
-            
-    except Exception as e:
-        logger.error(f"Error getting project details: {e}")
-        return {"id": launchpad_id, "name": "Unknown", "description": "No description available"}
 
 async def analyze_investor_basic(
     user_id: str, 

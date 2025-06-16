@@ -1,5 +1,3 @@
-# lpad-agent
+# Launchpad Agent
 
-```bash
-docker run --name mongo -p 27017:27017 -d mongo 
-```
+An AI-powered system that evaluates tweets to identify and score potential investors for cryptocurrency launchpad projects. The system uses advanced NLP and social media analysis to provide intelligent investor matching and grading.

@@ -33,7 +33,7 @@ SPAM_INDICATORS = [
     "get rich", "financial advice", "not financial advice", "NFA"
 ]
 
-async def classify_tweet(tweet_content: str, tweet_id: str = None) -> TweetEvaluation:
+async def classify_tweet(tweet_content: str, tweet_id: str) -> TweetEvaluation:
     """
     Stage 1: Classify tweet as candidate, spam, irrelevant, or negative
     
@@ -48,13 +48,18 @@ async def classify_tweet(tweet_content: str, tweet_id: str = None) -> TweetEvalu
     try:
         # Pre-process tweet content
         cleaned_content = _preprocess_tweet(tweet_content)
+        logger.debug(f"Cleaned content: {cleaned_content}")
         
         # Quick keyword analysis
         investment_keywords_found = _find_investment_keywords(cleaned_content)
+        logger.debug(f"Investment keywords found: {investment_keywords_found}")
+        
         spam_score = _calculate_spam_score(cleaned_content)
+        logger.debug(f"Spam score: {spam_score}")
         
         # Use AI for detailed classification
         classification_result = await _ai_classify_tweet(cleaned_content)
+        logger.debug(f"Classification result: {classification_result}")
         
         # Calculate final classification
         final_classification = _determine_final_classification(
@@ -62,9 +67,11 @@ async def classify_tweet(tweet_content: str, tweet_id: str = None) -> TweetEvalu
             investment_keywords_found, 
             spam_score
         )
+        logger.debug(f"Final classification: {final_classification}")
         
         # Extract sentiment scores
         sentiment = _extract_sentiment(classification_result)
+        logger.debug(f"Sentiment: {sentiment}")
         
         # Calculate investment intent score
         investment_intent_score = _calculate_investment_intent_score(
@@ -73,7 +80,7 @@ async def classify_tweet(tweet_content: str, tweet_id: str = None) -> TweetEvalu
         )
         
         return TweetEvaluation(
-            tweet_id=tweet_id or "unknown",
+            tweet_id=tweet_id,
             classification=final_classification,
             sentiment=sentiment,
             confidence=classification_result.get("confidence", 0.5),
@@ -98,9 +105,9 @@ async def classify_tweet(tweet_content: str, tweet_id: str = None) -> TweetEvalu
 async def _ai_classify_tweet(tweet_content: str) -> Dict:
     """Use AI to classify the tweet with detailed analysis"""
     
-    system_prompt = """You are an expert tweet classifier for cryptocurrency/blockchain investment analysis.
+    system_prompt = """You are an expert tweet classifier for cryptocurrency/blockchain/ai products/ai agents investment analysis.
 
-Your task is to classify tweets and analyze their investment relevance. Return a JSON response with this exact structure:
+Your task is to classify a tweet thread (pay more attention to the last one) and analyze the investment relevance of the thread. Return a JSON response with this exact structure:
 
 {
     "classification": "candidate|spam|irrelevant|negative",
@@ -119,7 +126,7 @@ Your task is to classify tweets and analyze their investment relevance. Return a
 Classification criteria:
 
 CANDIDATE tweets show:
-- Genuine interest in learning about or investing in crypto/blockchain projects
+- Genuine interest in learning about or investing in crypto/blockchain/ai products/ai agents projects
 - Positive sentiment about specific technologies or projects
 - Questions about project fundamentals, tokenomics, team, or roadmap
 - Mentions of research, due diligence, or analysis
@@ -148,11 +155,11 @@ Focus on genuine investment interest and learning intent, not just price specula
 
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"Classify this tweet:\n\n{tweet_content}"}
+        {"role": "user", "content": f"Classify this tweet thread:\n\n{tweet_content}\n\nPay more attention to the last one."}
     ]
-    
+
     client = get_oai_async_client()
-    
+
     try:
         response = await client.chat.completions.create(
             model=get_model_id(),
@@ -186,10 +193,10 @@ def _preprocess_tweet(content: str) -> str:
     """Clean and preprocess tweet content"""
     # Remove URLs
     content = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', content)
-    
+
     # Remove extra whitespace
     content = re.sub(r'\s+', ' ', content).strip()
-    
+
     return content
 
 def _find_investment_keywords(content: str) -> List[str]:
@@ -207,22 +214,23 @@ def _calculate_spam_score(content: str) -> float:
     """Calculate spam likelihood score (0-1)"""
     content_lower = content.lower()
     spam_indicators_found = 0
-    
+    WORDS_COUNT = len(content_lower.split())
+
     for indicator in SPAM_INDICATORS:
         if indicator.lower() in content_lower:
             spam_indicators_found += 1
-    
+
     # Count excessive emojis
     emoji_count = len(re.findall(r'[🚀💎🙌📈📊💰🔥⚡️🌙]', content))
     if emoji_count > 3:
-        spam_indicators_found += emoji_count - 3
-    
+        spam_indicators_found += emoji_count
+
     # Count excessive capitalization
     caps_ratio = sum(1 for c in content if c.isupper()) / max(len(content), 1)
-    if caps_ratio > 0.3:
-        spam_indicators_found += 2
-    
-    return min(spam_indicators_found / 10.0, 1.0)
+    if caps_ratio > 0.5:
+        spam_indicators_found += 5
+
+    return min(spam_indicators_found / WORDS_COUNT, 1.0)
 
 def _determine_final_classification(
     ai_result: Dict, 
@@ -231,7 +239,7 @@ def _determine_final_classification(
 ) -> TweetClassification:
     """Combine AI classification with rule-based checks"""
     
-    ai_classification = ai_result.get("classification", "irrelevant").lower()
+    ai_classification = str(ai_result.get("classification", "irrelevant")).lower()
     
     # Override with spam if high spam score
     if spam_score > 0.6:

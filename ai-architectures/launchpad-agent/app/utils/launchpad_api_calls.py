@@ -49,6 +49,10 @@ async def search_launchpad(
             )
             
         try:
+            with open("resp_json.json", "w") as f:
+                import json
+                json.dump(resp_json, f, indent=4)
+
             result = [
                 launchpad.Launchpad.model_validate(item)
                 for item in resp_json['result']

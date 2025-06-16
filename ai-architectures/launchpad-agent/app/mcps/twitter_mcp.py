@@ -4,7 +4,7 @@ from app.utils.twitter_api_calls import (
     list_tweets_of_user as list_tweets_of_user_api,
     get_tweet_info as get_tweet_info_api,
     get_twitter_user_info_by_username as get_twitter_user_info_by_username_api,
-    get_tweet_threads_by_id as get_tweet_threads_by_id_api,
+    get_tweet_threads_by_twitter_id as get_tweet_threads_by_id_api,
 )
 from typing import List, Optional
 

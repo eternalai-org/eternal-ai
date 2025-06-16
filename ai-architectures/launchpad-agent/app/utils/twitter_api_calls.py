@@ -447,7 +447,7 @@ async def build_twitter_social_graph(
 
 from app.utils.misc import dsu
 
-async def get_tweet_threads_by_id(
+async def get_tweet_threads_by_twitter_id(
     user_id: str,
     max_calls: int = 5,
     twitter_api_base_url: str = TWITTER_API_URL,
@@ -510,3 +510,30 @@ async def get_tweet_threads_by_id(
 
     return response_model(result=threads)
     
+async def get_tweet_threads_by_tweet_id(
+    tweet_id: str,
+    max_depth: int = 5,
+    twitter_api_base_url: str = TWITTER_API_URL,
+    twitter_api_key: str = TWITTER_API_KEY,
+) -> commons.ResponseMessage[list[twitter.Tweet]]:
+    response_model = commons.ResponseMessage[list[twitter.Tweet]]
+
+    tweet_req = await get_tweet_info(tweet_id, twitter_api_base_url, twitter_api_key)
+    current_tweet = tweet_req.result
+    tweets: list[twitter.Tweet] = [current_tweet]
+
+    for _ in range(max_depth):
+        for ref in (current_tweet.referenced_tweets or []):
+            ref: dict[str, Any]
+            _type, _id = ref.get('type'), ref.get('id')
+
+            if _type == "replied_to":
+                tweet_req = await get_tweet_info(_id, twitter_api_base_url, twitter_api_key)
+
+                if tweet_req.result is not None:
+                    current_tweet = tweet_req.result
+                    tweets.append(current_tweet)
+
+                break
+
+    return response_model(result=tweets)

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Literal
+from typing import Optional
 
 CURRENCY_UNIT = "EAI"
 
@@ -25,7 +26,7 @@ class Launchpad(BaseModel):
     token_image_url: str
     total_supply: str
     tge_balance: str
-    airdrop_balance: str
+    airdrop_balance: Optional[str] = None
     liquidity_balance: str
     team_balance: str
     max_fund_balance: str

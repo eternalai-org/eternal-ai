@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 class TweetClassification(str, Enum):
     CANDIDATE = "candidate"
@@ -67,16 +67,15 @@ class InvestorProfile(BaseModel):
     strengths: List[str] = Field(description="Positive attributes")
     reasoning: str = Field(description="Detailed explanation of the grading")
     project_fit_score: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="How well they fit the specific project")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ProjectIdentification(BaseModel):
     tweet_id: str
     launchpad_id: Optional[str] = "N/A"
     project_name: Optional[str] = "N/A"
+    description: Optional[str] = "N/A"
     confidence: float = Field(ge=0.0, le=1.0, description="Confidence in project identification")
-    keywords_matched: List[str] = Field(default_factory=list)
     reasoning: str = Field(description="Explanation for project identification")
-    alternative_projects: List[Dict[str, Any]] = Field(default_factory=list, description="Other potential matches")
 
 class EvaluationResult(BaseModel):
     """Complete evaluation result for a tweet"""
@@ -95,5 +94,5 @@ class EvaluationResult(BaseModel):
     
     # Metadata
     processing_time_seconds: float
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: str = Field(default="completed", description="Processing status") 

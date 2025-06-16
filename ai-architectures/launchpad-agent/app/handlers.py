@@ -5,22 +5,55 @@ from .schemas.evaluation import EvaluationResult, TweetClassification
 from .agents.tweet_classifier import classify_tweet
 from .agents.project_identifier import identify_launchpad_project
 from .agents.investor_analyzer import analyze_investor_profile
+from .agents.onboarding_agent import process_onboarding
 from .utils.mongodb import get_mongo_database
-import logging 
+import logging
+from .utils.twitter_api_calls import get_tweet_threads_by_tweet_id, get_tweet_info
+from .schemas import commons, twitter
+from typing import Optional
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
 async def evaluate(request: EvaluationRequest):
     """Complete tweet evaluation pipeline"""
-    
+
+    # disable for now, TODO: will be enabled when the agent become stable
+    # if await get_evaluation_result(request.tweet_id) is not None:
+    #     logger.info(f"Tweet {request.tweet_id} already evaluated, skipping")
+    #     return
+
     start_time = time.time()
     logger.info(f"Starting evaluation for tweet {request.tweet_id}")
+    
+    if settings.lite_logging_base_url:
+        result_report = request.model_dump_json(indent=4)
+        from lite_logging import async_log
+        await async_log(result_report, tags=["evaluation_request"], channel="launchpad-agent", server_url=settings.lite_logging_base_url)
     
     try:
         # Stage 1: Tweet Classification
         logger.info(f"Stage 1: Classifying tweet {request.tweet_id}")
-        classification = await classify_tweet(request.tweet_content, request.tweet_id)
-        
+
+        req = await get_tweet_threads_by_tweet_id(request.tweet_id)
+        tweets = []
+
+        if req.status == commons.APIStatus.OK:
+            tweets.extend(req.result[::-1])
+
+        else:
+            tweets.append(await get_tweet_info(request.tweet_id))
+
+        threaded_content = ""
+
+        for i, tweet in enumerate(tweets):
+            tweet: twitter.Tweet
+            threaded_content += f"Author: {tweet.author_id}\n"
+            threaded_content += f"Content: {tweet.text}\n"
+            threaded_content += f"--------------------------------\n" if i != len(tweets) - 1 else ""
+
+        classification = await classify_tweet(threaded_content, request.tweet_id)
+
         if classification.classification != TweetClassification.CANDIDATE:
             logger.info(f"Tweet {request.tweet_id} classified as {classification.classification.value}, stopping evaluation")
             
@@ -40,7 +73,11 @@ async def evaluate(request: EvaluationRequest):
         
         # Stage 2: Project Identification
         logger.info(f"Stage 2: Identifying project for tweet {request.tweet_id}")
-        project_identification = await identify_launchpad_project(request.tweet_content, request.tweet_id, request.network_id)
+        project_identification = await identify_launchpad_project(
+            request.tweet_content, 
+            request.tweet_id, 
+            request.network_id
+        )
         
         if not project_identification.launchpad_id:
             logger.info(f"No launchpad project identified for tweet {request.tweet_id}, stopping evaluation")
@@ -79,13 +116,14 @@ async def evaluate(request: EvaluationRequest):
             processing_time_seconds=time.time() - start_time,
             status="completed_full"
         )
-        
+
+        await process_onboarding(result)
         await store_evaluation_result(result)
-        
+
         logger.info(f"Evaluation complete: Tweet {request.tweet_id}, Project {project_identification.launchpad_id}, "
                    f"Grade {investor_profile.grade.value}, Score {investor_profile.score:.1f}, "
                    f"Time: {time.time() - start_time:.2f}s")
-        
+
     except Exception as e:
         logger.error(f"Error evaluating tweet {request.tweet_id}: {e}", exc_info=True)
         
@@ -122,11 +160,22 @@ async def store_evaluation_result(result: EvaluationResult):
             upsert=True
         )
         
+        if settings.lite_logging_base_url:
+            result_report = result.model_dump_json(indent=4)
+            from lite_logging import async_log
+            await async_log(result_report, tags=["evaluation_result"], channel="launchpad-agent", server_url=settings.lite_logging_base_url)
+        
         logger.info(f"Stored evaluation result for tweet {result.tweet_id}")
         
     except Exception as e:
         logger.error(f"Error storing evaluation result for {result.tweet_id}: {e}", exc_info=True)
-        
-async def congrats_investor(request: EvaluationRequest):
-    """Congrats the investor for their investment"""
-    
+
+async def get_evaluation_result(tweet_id: str) -> Optional[EvaluationResult]:
+    db = get_mongo_database("evaluations")
+    collection = db.get_collection("tweet_evaluations")
+    result = collection.find_one({"tweet_id": tweet_id})
+
+    if result is None:
+        return None
+
+    return EvaluationResult.model_validate(result)
