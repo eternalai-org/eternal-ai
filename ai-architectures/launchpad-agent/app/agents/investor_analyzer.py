@@ -1,6 +1,5 @@
 import json
 from typing import Dict, List, Any, Optional
-from datetime import datetime, timezone
 from app.schemas.evaluation import (
     InvestorProfile, InvestorGrade, ResearchInterest, 
     InvestmentBehavior, SocialMetrics

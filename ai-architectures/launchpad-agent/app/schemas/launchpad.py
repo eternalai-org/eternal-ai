@@ -33,6 +33,7 @@ class Launchpad(BaseModel):
     start_tweet_id: str
     end_tweet_id: str
     price_usd: str
+    price_eai: str
     market_cap_usd: str
 
 
