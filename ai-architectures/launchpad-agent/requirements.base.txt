@@ -9,3 +9,4 @@ fastmcp
 lite-logging-client
 pydantic-settings
 schedule
+openai
