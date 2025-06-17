@@ -12,6 +12,26 @@ from .utils.twitter_api_calls import get_tweet_threads_by_tweet_id, get_tweet_in
 from .schemas import commons, twitter
 from typing import Optional
 from .config import settings
+import httpx
+
+async def telelog(message: str, fmt: str = "HTML"):
+    if not settings.telegram_post_url:
+        return False
+
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(
+                settings.telegram_post_url,
+                json={
+                    "text": f'<pre>\n{message}\n</pre>',
+                    "parse_mode": fmt,
+                    "disable_notification": True,
+                },
+                timeout=httpx.Timeout(10.0, connect=10.0)
+            )
+        except Exception as err: pass
+
+    return resp.status_code == 200
 
 logger = logging.getLogger(__name__)
 
@@ -168,8 +188,20 @@ async def store_evaluation_result(result: EvaluationResult):
             from lite_logging import async_log
             await async_log(result_report, tags=["evaluation_result"], channel="launchpad-agent", server_url=settings.lite_logging_base_url)
         
-        logger.info(f"Stored evaluation result for tweet {result.tweet_id}")
+        tweet_classification = result.tweet_evaluation
+        project_identification = result.project_identification
+        investor_profile = result.investor_profile
         
+        if tweet_classification:
+            await telelog(tweet_classification.model_dump_json(indent=2))
+            
+        if project_identification:
+            await telelog(project_identification.model_dump_json(indent=2))
+            
+        if investor_profile:
+            await telelog(investor_profile.model_dump_json(indent=2))
+        
+        logger.info(f"Stored evaluation result for tweet {result.tweet_id}")
     except Exception as e:
         logger.error(f"Error storing evaluation result for {result.tweet_id}: {e}", exc_info=True)
 
