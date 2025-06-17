@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import Optional
+import os
 
 class Settings(BaseSettings):
     # API Keys
@@ -18,6 +19,7 @@ class Settings(BaseSettings):
 
     # Logging
     lite_logging_base_url: Optional[str] = Field(alias="LITE_LOGGING_BASE_URL", default=None)
+    lite_logging_channel: Optional[str] = Field(alias="LITE_LOGGING_CHANNEL", default=f'room-{os.urandom(16).hex()}')
 
     # app state
     app_env: str = Field(alias="APP_ENV", default="development")

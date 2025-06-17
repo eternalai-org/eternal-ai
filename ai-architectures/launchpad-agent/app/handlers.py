@@ -15,7 +15,7 @@ from .config import settings
 
 logger = logging.getLogger(__name__)
 
-async def evaluate(request: EvaluationRequest):
+async def evaluate_tweet(request: EvaluationRequest):
     """Complete tweet evaluation pipeline"""
 
     # disable for now, TODO: will be enabled when the agent become stable
@@ -48,9 +48,12 @@ async def evaluate(request: EvaluationRequest):
 
         for i, tweet in enumerate(tweets):
             tweet: twitter.Tweet
+            threaded_content += f"Tweet: {tweet.id}\n"
             threaded_content += f"Author: {tweet.author_id}\n"
             threaded_content += f"Content: {tweet.text}\n"
             threaded_content += f"--------------------------------\n" if i != len(tweets) - 1 else ""
+
+        logger.info(f"Threaded content: {threaded_content}")
 
         classification = await classify_tweet(threaded_content, request.tweet_id)
 
@@ -74,7 +77,7 @@ async def evaluate(request: EvaluationRequest):
         # Stage 2: Project Identification
         logger.info(f"Stage 2: Identifying project for tweet {request.tweet_id}")
         project_identification = await identify_launchpad_project(
-            request.tweet_content, 
+            threaded_content, 
             request.tweet_id, 
             request.network_id
         )

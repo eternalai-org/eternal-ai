@@ -1,6 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Union
 from datetime import datetime, timezone
 
 class TweetClassification(str, Enum):
@@ -70,8 +70,8 @@ class InvestorProfile(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ProjectIdentification(BaseModel):
-    tweet_id: str
-    launchpad_id: Optional[str] = "N/A"
+    tweet_id: Union[int, str]
+    launchpad_id: Optional[Union[int, str]] = "N/A"
     project_name: Optional[str] = "N/A"
     description: Optional[str] = "N/A"
     confidence: float = Field(ge=0.0, le=1.0, description="Confidence in project identification")
@@ -87,7 +87,7 @@ class EvaluationResult(BaseModel):
     tweet_evaluation: TweetEvaluation
     
     # Stage 2: Project Identification  
-    project_identification: ProjectIdentification
+    project_identification: Optional[ProjectIdentification] = None
     
     # Stage 3: Investor Analysis (only if stages 1&2 succeed)
     investor_profile: Optional[InvestorProfile] = None

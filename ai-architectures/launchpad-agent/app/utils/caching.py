@@ -185,7 +185,7 @@ def mongo_cache(
                 if isinstance(result, BaseModel):
                     cache_data["data"] = {
                         "model_type": result.__class__.__name__,
-                        "model_data": result.model_dump()
+                        "model_data": result.model_dump()   
                     }
 
                 collection.update_one(

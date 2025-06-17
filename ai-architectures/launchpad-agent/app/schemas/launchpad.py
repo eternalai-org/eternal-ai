@@ -1,16 +1,16 @@
 from pydantic import BaseModel
 from typing import Literal
-from typing import Optional
+from typing import Optional, Union
 
 CURRENCY_UNIT = "EAI"
 
 class Launchpad(BaseModel):
-    id: int
-    twitter_post_id: int
-    tweet_id: str
+    id: Union[int, str]
+    twitter_post_id: Union[int, str]
+    tweet_id: Union[int, str]
     name: str
     description: str
-    twitter_id: str
+    twitter_id: Union[int, str]
     twitter_username: str
     twitter_name: str
     address: str

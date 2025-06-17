@@ -8,6 +8,11 @@ from app.utils.lm import get_oai_async_client, get_model_id
 from app.utils.misc import float_clamp, retry
 import logging
 from json_repair import repair_json
+from app.utils.twitter_api_calls import get_tweet_threads_by_twitter_id
+from app.schemas.twitter import Tweet
+from lite_logging import async_log
+import asyncio
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +30,10 @@ async def analyze_investor_profile(
         
         # Gather social data
         social_data = await gather_social_data(user_id)
+        
+        with open("social_data.json", "w") as f:
+            import json
+            json.dump(social_data, f, indent=4, default=lambda x: x.model_dump(mode="json") if isinstance(x, Tweet) else str(x))
 
         if social_data.get("profile") is None:
             return _create_error_profile(user_id, "Failed to get profile")
@@ -55,6 +64,16 @@ async def analyze_investor_profile(
         return await analyze_investor_basic(user_id, tweet_content, launchpad_id, social_data)
         
     except Exception as e:
+        import traceback
+        traceback_str = traceback.format_exc()
+
+        asyncio.create_task(async_log(
+            traceback_str, 
+            channel=settings.lite_logging_channel,
+            tags=["investor_analyzer", "error"],
+            server_url=settings.lite_logging_base_url
+        ))
+
         logger.error(f"Error analyzing investor {user_id}: {e}")
         return _create_error_profile(user_id, str(e))
     
@@ -102,7 +121,7 @@ Write the summary in short and concise manner.
 async def gather_social_data(user_id: str) -> Dict[str, Any]:
     """Collect social media data"""
     try:
-        from app.mcps.twitter_mcp import _get_twitter_user_info_by_id, _get_tweet_threads_by_id
+        from app.mcps.twitter_mcp import _get_twitter_user_info_by_id
 
         # Get profile
         profile_result = await _get_twitter_user_info_by_id(user_id)
@@ -110,7 +129,8 @@ async def gather_social_data(user_id: str) -> Dict[str, Any]:
         if profile_result is None:
             return {"profile": None, "tweets": []}
 
-        threads = await _get_tweet_threads_by_id(user_id)
+        req = await get_tweet_threads_by_twitter_id(user_id)
+        threads = req.result
         tweets: list[Tweet] = []
         summary_tweet_content: Dict[str, str] = {}
 
@@ -131,6 +151,16 @@ async def gather_social_data(user_id: str) -> Dict[str, Any]:
         }
         
     except Exception as e:
+        import traceback
+        traceback_str = traceback.format_exc()
+
+        asyncio.create_task(async_log(
+            traceback_str, 
+            channel=settings.lite_logging_channel,
+            tags=["gather_social_data", "error"],
+            server_url=settings.lite_logging_base_url
+        ))
+
         logger.error(f"Error gathering social data: {e}")
         return {"profile": {}, "tweets": []}
 
@@ -348,6 +378,7 @@ Based on this information, analyze the investor and provide a comprehensive eval
 
 Please respond with a JSON object containing:
 {{
+    "reasoning": "<detailed explanation of the analysis and scoring>",
     "overall_score": <float 0-100>,
     "grade": "<A|B|C|D|E>",
     "project_fit_score": <float 0.0-1.0>,
@@ -368,7 +399,6 @@ Please respond with a JSON object containing:
     }},
     "strengths": [<list of strength strings>],
     "risk_factors": [<list of risk factor strings>],
-    "reasoning": "<detailed explanation of the analysis and scoring>"
 }}
 
 Focus on:
@@ -466,7 +496,16 @@ Be thorough but concise in your analysis.
         )
         
     except Exception as e:
-        logger.error(f"Error in AI investor analysis: {e}")
+        import traceback
+        traceback_str = traceback.format_exc()
+
+        asyncio.create_task(async_log(
+            traceback_str, 
+            channel=settings.lite_logging_channel,
+            tags=["analyze_investor_with_ai", "error"],
+            server_url=settings.lite_logging_base_url
+        ))
+
         return None
 
 async def analyze_project_specific_fit(project_details: Dict[str, Any], social_data: Dict[str, Any]) -> str:
@@ -496,7 +535,7 @@ async def analyze_project_specific_fit(project_details: Dict[str, Any], social_d
         total_analyzed = min(len(tweets), 20)
         
         for tweet in tweets[:total_analyzed]:
-            text = tweet.get('text', '').lower()
+            text = tweet.text.lower()
             if any(keyword in text for keyword in project_name.split() if len(keyword) > 2):
                 relevant_tweets += 1
         
@@ -518,7 +557,10 @@ async def analyze_investor_basic(
     # Analyze components using existing basic methods
     research_interests = await analyze_research_interests(social_data.get("tweets", []))
     investment_behavior = analyze_investment_behavior_basic(social_data.get("tweets", []))
-    social_metrics = calculate_social_metrics(social_data.get("profile", {}), social_data.get("tweets", []))
+    social_metrics = calculate_social_metrics(
+        social_data.get("profile", {}), 
+        list(social_data.get("summary_tweet_content", {}).values())
+    )
     
     # Calculate score and grade
     final_score = calculate_basic_score(research_interests, social_metrics)

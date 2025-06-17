@@ -6,6 +6,10 @@ from app.schemas.evaluation import TweetClassification, TweetEvaluation, Sentime
 from app.utils.lm import get_oai_async_client, get_model_id
 from app.utils.misc import float_clamp
 import logging
+from app.utils.twitter_api_calls import get_tweet_info
+from lite_logging import async_log
+from app.config import settings
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +37,7 @@ SPAM_INDICATORS = [
     "get rich", "financial advice", "not financial advice", "NFA"
 ]
 
-async def classify_tweet(tweet_content: str, tweet_id: str) -> TweetEvaluation:
+async def classify_tweet(threaded_content: str, target_tweet_id: str = None) -> TweetEvaluation:
     """
     Stage 1: Classify tweet as candidate, spam, irrelevant, or negative
     
@@ -47,31 +51,31 @@ async def classify_tweet(tweet_content: str, tweet_id: str) -> TweetEvaluation:
     
     try:
         # Pre-process tweet content
-        cleaned_content = _preprocess_tweet(tweet_content)
-        logger.debug(f"Cleaned content: {cleaned_content}")
+        cleaned_content = _preprocess_tweet(threaded_content)
+        logger.info(f"Cleaned content: {cleaned_content}")
         
         # Quick keyword analysis
         investment_keywords_found = _find_investment_keywords(cleaned_content)
-        logger.debug(f"Investment keywords found: {investment_keywords_found}")
+        logger.info(f"Investment keywords found: {investment_keywords_found}")
         
         spam_score = _calculate_spam_score(cleaned_content)
-        logger.debug(f"Spam score: {spam_score}")
-        
+        logger.info(f"Spam score: {spam_score}")
+
         # Use AI for detailed classification
-        classification_result = await _ai_classify_tweet(cleaned_content)
-        logger.debug(f"Classification result: {classification_result}")
-        
+        classification_result = await _ai_classify_tweet(cleaned_content, target_tweet_id)
+        logger.info(f"Classification result: {classification_result}")
+
         # Calculate final classification
         final_classification = _determine_final_classification(
             classification_result, 
             investment_keywords_found, 
             spam_score
         )
-        logger.debug(f"Final classification: {final_classification}")
+        logger.info(f"Final classification: {final_classification}")
         
         # Extract sentiment scores
         sentiment = _extract_sentiment(classification_result)
-        logger.debug(f"Sentiment: {sentiment}")
+        logger.info(f"Sentiment: {sentiment}")
         
         # Calculate investment intent score
         investment_intent_score = _calculate_investment_intent_score(
@@ -80,7 +84,7 @@ async def classify_tweet(tweet_content: str, tweet_id: str) -> TweetEvaluation:
         )
         
         return TweetEvaluation(
-            tweet_id=tweet_id,
+            tweet_id=target_tweet_id,
             classification=final_classification,
             sentiment=sentiment,
             confidence=classification_result.get("confidence", 0.5),
@@ -90,10 +94,19 @@ async def classify_tweet(tweet_content: str, tweet_id: str) -> TweetEvaluation:
         )
         
     except Exception as e:
-        logger.error(f"Error classifying tweet: {e}", exc_info=True)
+        import traceback
+        traceback_str = traceback.format_exc()
+
+        asyncio.create_task(async_log(
+            traceback_str, 
+            channel=settings.lite_logging_channel,
+            tags=["tweet_classifier", "error"],
+            server_url=settings.lite_logging_base_url
+        ))
+
         # Return safe default
         return TweetEvaluation(
-            tweet_id=tweet_id or "unknown",
+            tweet_id=target_tweet_id or "unknown",
             classification=TweetClassification.IRRELEVANT,
             sentiment=SentimentScore(positive=0.0, negative=0.0, neutral=1.0, confidence=0.0),
             confidence=0.0,
@@ -102,17 +115,17 @@ async def classify_tweet(tweet_content: str, tweet_id: str) -> TweetEvaluation:
             investment_intent_score=0.0
         )
 
-async def _ai_classify_tweet(tweet_content: str) -> Dict:
+async def _ai_classify_tweet(tweet_content: str, target_tweet_id: str = None) -> Dict:
     """Use AI to classify the tweet with detailed analysis"""
     
     system_prompt = """You are an expert tweet classifier for cryptocurrency/blockchain/ai products/ai agents investment analysis.
 
-Your task is to classify a tweet thread (pay more attention to the last one) and analyze the investment relevance of the thread. Return a JSON response with this exact structure:
+Your task is to classify a tweet (use context from the provided tweet thread). Analyze the investment relevance of the tweet. Return a JSON response with this exact structure:
 
 {
+    "reasoning": "Detailed explanation of classification",
     "classification": "candidate|spam|irrelevant|negative",
     "confidence": 0.85,
-    "reasoning": "Detailed explanation of classification",
     "sentiment": {
         "positive": 0.7,
         "negative": 0.1,
@@ -155,7 +168,7 @@ Focus on genuine investment interest and learning intent, not just price specula
 
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"Classify this tweet thread:\n\n{tweet_content}\n\nPay more attention to the last one."}
+        {"role": "user", "content": f"Classify this tweet thread:\n\n{tweet_content}\n\nPay more attention to the last one (Tweet: {target_tweet_id})."}
     ]
 
     client = get_oai_async_client()
@@ -179,7 +192,16 @@ Focus on genuine investment interest and learning intent, not just price specula
             return _parse_non_json_response(response_text)
             
     except Exception as e:
-        logger.error(f"Error in AI classification: {e}")
+        import traceback
+        traceback_str = traceback.format_exc()
+
+        asyncio.create_task(async_log(
+            traceback_str, 
+            channel=settings.lite_logging_channel,
+            tags=["tweet_classifier", "error"],
+            server_url=settings.lite_logging_base_url
+        ))
+
         return {
             "classification": "irrelevant",
             "confidence": 0.0,

@@ -498,7 +498,7 @@ async def get_tweet_threads_by_twitter_id(
     threads: dict[str, list[twitter.Tweet]] = {}
 
     for thread in unique_threads:
-        threads[thread] = [
+        threads[str(tweets[thread].id)] = [
             tweets[i]
             for i in range(len(tweets))
             if parent[i] == thread
@@ -508,7 +508,7 @@ async def get_tweet_threads_by_twitter_id(
         threads[thread].sort(key=lambda x: x.created_timestamp)
 
     return response_model(result=threads)
-    
+
 async def get_tweet_threads_by_tweet_id(
     tweet_id: str,
     max_depth: int = 5,

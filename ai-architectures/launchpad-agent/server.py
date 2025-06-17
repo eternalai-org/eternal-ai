@@ -10,7 +10,7 @@ import time
 import logging
 
 logging_fmt = "%(asctime)s - %(message)s"
-logging.basicConfig(level=logging.DEBUG, format=logging_fmt)
+logging.basicConfig(level=logging.INFO, format=logging_fmt)
 logger = logging.getLogger(__name__)
 
 async def lifespan(app: fastapi.FastAPI):

@@ -6,6 +6,9 @@ import logging
 import re
 from app.utils.misc import retry, float_clamp
 from json_repair import repair_json
+from lite_logging import async_log
+from app.config import settings
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +83,16 @@ async def identify_launchpad_project(tweet_content: str, tweet_id: str = None, n
         return obj
 
     except Exception as e:
-        logger.error(f"Error identifying project for tweet: {e}", exc_info=True)
+        import traceback
+        traceback_str = traceback.format_exc()
+
+        asyncio.create_task(async_log(
+            traceback_str, 
+            channel=settings.lite_logging_channel,
+            tags=["project_identifier", "error"],
+            server_url=settings.lite_logging_base_url
+        ))
+
         return ProjectIdentification(
             tweet_id=tweet_id or "unknown",
             launchpad_id=None,
