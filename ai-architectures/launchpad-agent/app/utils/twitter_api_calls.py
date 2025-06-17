@@ -522,6 +522,10 @@ async def get_tweet_threads_by_tweet_id(
     tweets: list[twitter.Tweet] = [current_tweet]
 
     for _ in range(max_depth):
+        if current_tweet is None or not current_tweet.referenced_tweets:
+            logger.info(f"No more referenced tweets for {tweet_id}; Exiting")
+            break
+
         for ref in (current_tweet.referenced_tweets or []):
             ref: dict[str, Any]
             _type, _id = ref.get('type'), ref.get('id')
@@ -532,6 +536,9 @@ async def get_tweet_threads_by_tweet_id(
                 if tweet_req.result is not None:
                     current_tweet = tweet_req.result
                     tweets.append(current_tweet)
+
+                else:
+                    logger.error(f"Error getting tweet {_id} for {tweet_id}; Message: {tweet_req.error}")
 
                 break
 
