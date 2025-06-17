@@ -1,6 +1,5 @@
 import httpx
 from typing import Union, Any, Dict, List, Set
-import os
 from app.schemas import (
     twitter,
     commons

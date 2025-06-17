@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     lite_logging_base_url: Optional[str] = Field(alias="LITE_LOGGING_BASE_URL", default=None)
 
     # app state
-    app_state: str = Field(alias="APP_STATE", default="development")
+    app_env: str = Field(alias="APP_ENV", default="development")
 
     # Server
     host: str = Field(alias="HOST", default="0.0.0.0")
