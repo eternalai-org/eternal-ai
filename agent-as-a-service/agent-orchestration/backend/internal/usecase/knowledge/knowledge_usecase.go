@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"math/big"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/configs"
@@ -16,6 +18,8 @@ import (
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/logger"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/models"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/pkg/eth"
+	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/pkg/scraper"
+
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/pkg/utils"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/serializers"
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/ethapi"
@@ -24,12 +28,15 @@ import (
 	"github.com/eternalai-org/eternal-ai/agent-as-a-service/agent-orchestration/backend/services/3rd/zkclient"
 	"github.com/ethereum/go-ethereum/common"
 	resty "github.com/go-resty/resty/v2"
+	"github.com/jasonlvhit/gocron"
 	"github.com/mymmrac/telego"
 
 	"go.uber.org/zap"
 )
 
 var categoryNameTracer string = "knowledge_usecase_tracer"
+
+const grMax = 20
 
 type options func(*knowledgeUsecase)
 
@@ -222,6 +229,7 @@ func (uc *knowledgeUsecase) Webhook(ctx context.Context, req *models.RagHookResp
 		if len(identifies) < 2 {
 			return nil, fmt.Errorf("invalid identifier %s", req.Result.Identifier)
 		}
+
 		hash := identifies[0]
 		indexFile, err := strconv.Atoi(identifies[1])
 		if err != nil {
@@ -238,6 +246,7 @@ func (uc *knowledgeUsecase) Webhook(ctx context.Context, req *models.RagHookResp
 		if len(listFileInfo) < indexFile {
 			return nil, fmt.Errorf("invalid file index len(listFile) %v , index file %v", len(listFileInfo), indexFile)
 		}
+
 		for _, file := range kn.KnowledgeBaseFiles {
 			var lighthouseFile lighthouse.FileInLightHouse
 			if err := json.Unmarshal([]byte(file.FilecoinHashRawData), &lighthouseFile); err != nil {
@@ -495,6 +504,20 @@ func (uc *knowledgeUsecase) WatchWalletChange(ctx context.Context) error {
 			if err := uc.CheckBalance(ctx, k); err != nil {
 				continue
 			}
+
+			if k.DomainUrl == "" {
+				continue
+			}
+
+			if err := uc.knowledgeBaseRepo.UpdateById(ctx, k.ID, map[string]interface{}{"status": models.KnowledgeBaseStatusProcessCrawlData}); err != nil {
+				return err
+			}
+
+			t := time.Now().Add(3 * time.Second)
+			gocron.Every(1).Week().From(&t).Do(func() {
+				uc.ExecCrawlData(context.Background(), k.ID)
+			})
+
 		}
 
 		offset += len(resp)
@@ -507,10 +530,9 @@ func (uc *knowledgeUsecase) ScanKnowledgeBaseStatusPaymentReceipt(ctx context.Co
 	defer logger.Info(categoryNameTracer, "scan_knowledge_base_payment_receipt", zap.Any("start", start), zap.Any("end", time.Now()))
 	offset := 0
 	limit := 30
+	statuses := []models.KnowledgeBaseStatus{models.KnowledgeBaseStatusCrawlDataDone, models.KnowledgeBaseStatusPaymentReceipt}
 	for {
-		resp, err := uc.knowledgeBaseRepo.GetByStatus(
-			ctx, models.KnowledgeBaseStatusPaymentReceipt, offset, limit,
-		)
+		resp, err := uc.knowledgeBaseRepo.GetByStatuses(ctx, statuses, offset, limit)
 		if err != nil {
 			return
 		}
@@ -552,6 +574,159 @@ func (uc *knowledgeUsecase) ScanKnowledgeBaseStatusPaymentReceipt(ctx context.Co
 		}
 		offset += len(resp)
 	}
+}
+
+func (uc *knowledgeUsecase) ExecCrawlData(ctx context.Context, kbId uint) error {
+	start := time.Now()
+	defer logger.Info(categoryNameTracer, "scan_knowledge_base_payment_receipt_and_crawl_data", zap.Any("start", start), zap.Any("end", time.Now()))
+
+	kb, err := uc.knowledgeBaseRepo.GetById(ctx, kbId)
+	if err != nil {
+		return err
+	}
+	logger.Info(categoryNameTracer, "exec-crawl-data", zap.Any("website", kb.DomainUrl))
+
+	mainW := &sync.WaitGroup{}
+	scraper, err := scraper.NewScraper(kb.DomainUrl, 5)
+	if err != nil {
+		return err
+	}
+
+	mainW.Add(1)
+	outChan := scraper.FetchLinksFromDomainByRod(ctx, mainW)
+
+	if err := uc.processCrawlData(ctx, kb, outChan, scraper); err != nil {
+		logger.Error(categoryNameTracer, "processCrawlData", zap.Error(err))
+	}
+
+	mainW.Wait()
+
+	if err := uc.knowledgeBaseRepo.UpdateById(ctx, kb.ID, map[string]interface{}{"status": models.KnowledgeBaseStatusCrawlDataDone}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (uc *knowledgeUsecase) processCrawlData(ctx context.Context, kb *models.KnowledgeBase, urlChan chan string, scraper ports.IScraper) error {
+	grFileId := time.Now().Unix()
+	wg := &sync.WaitGroup{}
+	ch := make(chan int, grMax)
+	urlChecker := make(map[string]bool)
+	for _, f := range kb.KnowledgeBaseFiles {
+		if f.FromUrl != "" {
+			urlChecker[f.FromUrl] = true
+		}
+
+		if f.FileUrl != "" {
+			urlChecker[f.FileUrl] = true
+		}
+	}
+
+	for link := range urlChan {
+		logger.Info(categoryNameTracer, "processCrawlData", zap.Any("original-link", link))
+		if _, ok := urlChecker[link]; ok || strings.Contains(link, "signin?return=") || strings.Contains(link, "ethdenver.zendesk.com") {
+			continue
+		}
+
+		urlChecker[link] = true
+		wg.Add(1)
+		ch <- 1
+
+		go func() {
+			defer func() {
+				wg.Done()
+				<-ch
+			}()
+
+			c := context.Background()
+			var file *models.KnowledgeBaseFile
+			finalURL, err := utils.FollowRedirects(link)
+			if err != nil {
+				logger.Error(categoryNameTracer, "FollowRedirects", zap.Error(err))
+				return
+			}
+
+			if finalURL != link {
+				isFinalURLDownload, err := utils.IsDownloadLink(finalURL)
+				if err != nil {
+					logger.Error(categoryNameTracer, "IsDownloadLinkRedirectLink", zap.Error(err))
+					return
+				}
+
+				if isFinalURLDownload {
+					fInfo, _ := utils.GetFileInfoByURL(finalURL)
+					file = &models.KnowledgeBaseFile{
+						FileUrl:         finalURL,
+						FileSize:        uint(fInfo.Size),
+						FileName:        fInfo.Name,
+						KnowledgeBaseId: kb.ID,
+						GroupFileId:     grFileId,
+						Status:          models.KnowledgeBaseFileStatusPending,
+					}
+
+					_, err = uc.knowledgeBaseFileRepo.Create(c, file)
+					if err != nil {
+						logger.Error(categoryNameTracer, "uc.knowledgeBaseFileRepo.Create", zap.Error(err))
+					}
+					return
+				}
+			}
+
+			isDownloadLink, err := utils.IsDownloadLink(link)
+			if err != nil {
+				logger.Error(categoryNameTracer, "IsDownloadLink", zap.Error(err))
+				return
+			}
+			if isDownloadLink {
+				fInfo, _ := utils.GetFileInfoByURL(link)
+				file = &models.KnowledgeBaseFile{
+					FileUrl:         link,
+					FileSize:        uint(fInfo.Size),
+					FileName:        fInfo.Name,
+					KnowledgeBaseId: kb.ID,
+					GroupFileId:     grFileId,
+					Status:          models.KnowledgeBaseFileStatusPending,
+				}
+			} else {
+				content, err := scraper.ContentHtmlByUrl(c, link)
+				if err != nil {
+					logger.Error(categoryNameTracer, "ContentHtmlByUrl", zap.Error(err))
+					return
+				}
+
+				hash, err := lighthouse.UploadDataWithRetry(uc.lighthouseKey, utils.FileNameFromUrl(link), []byte(html.EscapeString(content)))
+				fileUrl := fmt.Sprintf("https://gateway.lighthouse.storage/ipfs/%s", hash)
+				fileSize, _ := utils.GetFileSizeByURL(fileUrl)
+				fileName := utils.FileNameFromUrl(link)
+				rawData := &lighthouse.FileInLightHouse{
+					Name:   fileName,
+					IsPart: false,
+					Files: []*lighthouse.FileDetail{
+						{Name: fileName, Hash: hash, Index: 1},
+					},
+				}
+				rw, _ := json.Marshal(rawData)
+				file = &models.KnowledgeBaseFile{
+					FileUrl:             fileUrl,
+					FileName:            fileName,
+					FileSize:            uint(fileSize),
+					KnowledgeBaseId:     kb.ID,
+					GroupFileId:         grFileId,
+					Status:              models.KnowledgeBaseFileStatusPending,
+					FilecoinHash:        hash,
+					FromUrl:             link,
+					FilecoinHashRawData: string(rw),
+				}
+			}
+
+			_, err = uc.knowledgeBaseFileRepo.Create(c, file)
+			if err != nil {
+				logger.Error(categoryNameTracer, "uc.knowledgeBaseFileRepo.Create", zap.Error(err))
+			}
+		}()
+	}
+	wg.Wait()
+	return nil
 }
 
 func (uc *knowledgeUsecase) CheckBalance(ctx context.Context, kn *models.KnowledgeBase) error {
@@ -726,6 +901,18 @@ func (uc *knowledgeUsecase) uploadKBFileToLighthouseAndProcess(ctx context.Conte
 				result = append(result, r)
 				continue
 			}
+		}
+
+		if f.FilecoinHash != "" {
+			file := &lighthouse.FileInLightHouse{
+				Name:   f.FileName,
+				IsPart: false,
+				Files: []*lighthouse.FileDetail{
+					{Name: f.FileName, Hash: f.FilecoinHash, Index: 1},
+				},
+			}
+			result = append(result, file)
+			continue
 		}
 
 		r, err := lighthouse.ZipAndUploadFileInMultiplePartsToLightHouseByUrl(f.FileUrl, "/tmp/data", uc.lighthouseKey)

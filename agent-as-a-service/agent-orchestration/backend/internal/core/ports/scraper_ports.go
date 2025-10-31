@@ -1,7 +1,12 @@
 package ports
 
-import "context"
+import (
+	"context"
+	"sync"
+)
 
 type IScraper interface {
-	ContentHtmlByUrl(ctx context.Context, url string) (string, error)
+	FetchLinksFromDomain(ctx context.Context, w *sync.WaitGroup) chan string
+	FetchLinksFromDomainByRod(ctx context.Context, w *sync.WaitGroup) chan string
+	ContentHtmlByUrl(ctx context.Context, rawUrl string) (string, error)
 }

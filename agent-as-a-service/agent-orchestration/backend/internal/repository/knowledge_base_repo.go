@@ -17,6 +17,7 @@ type KnowledgeBaseRepo interface {
 	DeleteById(ctx context.Context, id uint) error
 	Create(ctx context.Context, model *models.KnowledgeBase) (*models.KnowledgeBase, error)
 	GetByStatus(ctx context.Context, status models.KnowledgeBaseStatus, offset, limit int) ([]*models.KnowledgeBase, error)
+	GetByStatuses(ctx context.Context, statuses []models.KnowledgeBaseStatus, offset, limit int) ([]*models.KnowledgeBase, error)
 	List(ctx context.Context, req *models.ListKnowledgeBaseRequest) ([]*models.KnowledgeBase, error)
 	UpdateStatus(ctx context.Context, model *models.KnowledgeBase) error
 	UpdateById(ctx context.Context, id uint, updatedFields map[string]interface{}) error
@@ -93,6 +94,20 @@ func (r *knowledgeBaseRepo) DeleteById(ctx context.Context, id uint) error {
 
 		return tx.Delete(&models.KnowledgeBase{}, id).Error
 	})
+}
+
+func (r *knowledgeBaseRepo) GetByStatuses(ctx context.Context, statuses []models.KnowledgeBaseStatus, offset, limit int) ([]*models.KnowledgeBase, error) {
+	var data []*models.KnowledgeBase
+	err := r.db.WithContext(ctx).
+		Preload("KnowledgeBaseFiles").
+		Where("status IN (?)", statuses).
+		Offset(offset).
+		Limit(limit).
+		Find(&data).Error
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 func (r *knowledgeBaseRepo) GetByStatus(ctx context.Context, status models.KnowledgeBaseStatus, offset, limit int) ([]*models.KnowledgeBase, error) {

@@ -144,6 +144,7 @@ func (s *Service) RunJobs(ctx context.Context) error {
 		}()
 		s.KnowledgeUsecase.WatchWalletChange(context.Background())
 	})
+
 	gocron.Every(30).Second().Do(func() {
 		defer func() {
 			if rval := recover(); rval != nil {

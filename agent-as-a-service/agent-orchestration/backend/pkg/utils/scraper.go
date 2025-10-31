@@ -1,12 +1,22 @@
 package utils
 
 import (
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
+
+func ExtractDomainFromUrl(link string) (string, error) {
+	parser, err := url.Parse(link)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimPrefix(parser.Hostname(), "www."), nil
+}
 
 func MinifyHTML(html string) (string, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
@@ -59,4 +69,17 @@ func IsBase64DataURL(urlStr string) bool {
 	}
 
 	return matched
+}
+
+func FileNameFromUrl(urlString string) string {
+	u, err := url.Parse(urlString)
+	if err != nil {
+		return fmt.Sprintf("%d.html", time.Now().Unix())
+	}
+
+	host := u.Hostname()
+	path := u.Path
+	path = strings.Trim(path, "/")
+	path = strings.ReplaceAll(path, "/", "-")
+	return fmt.Sprintf("%s-%s.html", host, path)
 }

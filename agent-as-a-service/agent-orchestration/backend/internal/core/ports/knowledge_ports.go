@@ -29,4 +29,5 @@ type IKnowledgeUsecase interface {
 	CalcFeeByKnowledgeBaseId(ctx context.Context, kbId uint) (float64, error)
 	CheckBalance(ctx context.Context, kn *models.KnowledgeBase) error
 	ScanKnowledgeBaseStatusPaymentReceipt(ctx context.Context)
+	ExecCrawlData(ctx context.Context, kbId uint) error
 }
