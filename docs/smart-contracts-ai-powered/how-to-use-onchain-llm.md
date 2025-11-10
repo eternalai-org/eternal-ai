@@ -51,7 +51,7 @@ console.log("Inference result: ", inferResult);
 
 ### Step 3
 
-Complete example code can be found at: [https://github.com/eternalai-org/eternal-ai/blob/master/examples/UniverseDagents/scripts/sendUniverseAgentRequest.ts](../../examples/UniverseDagents/scripts/sendUniverseAgentRequest.ts)
+Complete example code can be found at: [https://github.com/kogisin/eternal-ai/blob/master/developer-guides/examples/universe-dagents/scripts/sendUniverseAgentRequest.ts](../../developer-guides/examples/universe-dagents/scripts/sendUniverseAgentRequest.ts)
 
 You can run the code with the following command:
 
