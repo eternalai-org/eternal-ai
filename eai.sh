@@ -2,7 +2,6 @@
 current_dir=$(pwd)
 worker_hub_folder="$current_dir/decentralized-compute/worker-hub" #step 1: eai miner setup
 aaas_folder="$current_dir/agent-as-a-service/agent-orchestration/backend" #step 2: aaas start
-aaas_folder="$current_dir/agent-as-a-service/agent-orchestration/backend" #step 3: eai aaas deploy-contract
 api_folder="$current_dir/decentralized-inference" #step 4: start APIs
 ai721_folder="$current_dir/developer-guides/run-an-end-to-end-decentralized-for-ai-agents/4.how-to-deploy-and-mint-agent" #step 5: mint agent
 
