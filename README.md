@@ -65,7 +65,7 @@ Eternal AI is free to try. Free usage and premium interactions may have limits.
 
 ## About this repository
 
-This repository originally hosted the Eternal AI peer-to-peer autonomous agent protocol. That code remains here for reference and is no longer actively maintained. The current Eternal AI product is developed in a separate private repository.
+This repository originally hosted the Eternal AI peer-to-peer autonomous agent protocol. That code and its full commit history are preserved on the [`legacy-src`](https://github.com/eternalai-org/eternal-ai/tree/legacy-src) branch for reference and are no longer actively maintained. The current Eternal AI product is developed in a separate private repository.
 
 ---
 
