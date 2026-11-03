@@ -4,7 +4,7 @@
 
 **Meet someone unreal.** Eternal AI is an AI companion platform and AI chatbot app where you chat one-to-one with AI characters, step into interactive story Plays, and create your own character stories. Whether you're looking for an AI girlfriend, AI boyfriend, virtual companion, or a creative AI roleplay partner — Eternal AI brings your imagination to life.
 
-[Website](https://eternalai.org) · [iOS](https://apps.apple.com/us/app/eternal-meet-someone-unreal/id6753974294) · [Android](https://play.google.com/store/apps/details?id=eternalai.org.bites) · [Android APK](https://eternalai.org/download/eternal.apk) · [X](https://x.com/EternalAI_) · [Discord](https://discord.gg/YphRKtSFqS) · [Reddit](https://www.reddit.com/r/EternalAI_org/)
+[Website](https://eternalai.org) · [iOS](https://apps.apple.com/us/app/eternal-meet-someone-unreal/id6753974294) · [Android](https://eternalai.org/download/eternal.apk) · [X](https://x.com/EternalAI_) · [Discord](https://discord.gg/YphRKtSFqS) · [Reddit](https://www.reddit.com/r/EternalAI_org/)
 
 ---
 
@@ -43,7 +43,7 @@ Create and publish your own interactive character Plays. Eligible creators earn 
 
 ### 📱 Everywhere
 
-Use Eternal AI on the [web](https://eternalai.org) or with the mobile app *Eternal: Meet Someone Unreal* on [iOS](https://apps.apple.com/us/app/eternal-meet-someone-unreal/id6753974294) and [Android](https://play.google.com/store/apps/details?id=eternalai.org.bites).
+Use Eternal AI on the [web](https://eternalai.org) or with the mobile app *Eternal: Meet Someone Unreal* on [iOS](https://apps.apple.com/us/app/eternal-meet-someone-unreal/id6753974294) and [Android](https://eternalai.org/download/eternal.apk).
 
 ### 🌍 19 languages
 
