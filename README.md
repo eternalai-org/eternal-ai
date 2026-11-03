@@ -2,7 +2,7 @@
 
 ![Eternal AI](media-kit/app/banner.jpg)
 
-**Meet someone unreal.** Eternal AI is an AI companion platform and AI chatbot app where you chat one-to-one with AI characters, step into interactive story Plays, and create your own character stories. Whether you're looking for an AI girlfriend, AI boyfriend, virtual companion, or a creative AI roleplay partner — Eternal AI brings your imagination to life.
+**Meet someone unreal.** Eternal AI is an AI companion platform and AI chatbot app where you chat one-to-one with AI characters, step into interactive story Plays, read illustrated Flings episodes, and create your own character stories. Whether you're looking for an AI girlfriend, AI boyfriend, virtual companion, or a creative AI roleplay partner — Eternal AI brings your imagination to life.
 
 [Website](https://eternalai.org) · [iOS](https://apps.apple.com/us/app/eternal-meet-someone-unreal/id6753974294) · [Android](https://eternalai.org/download/eternal.apk) · [X](https://x.com/EternalAI_) · [Discord](https://discord.gg/YphRKtSFqS) · [Reddit](https://www.reddit.com/r/EternalAI_org/)
 
@@ -35,6 +35,16 @@ Plays are interactive fiction experiences — creator-made AI stories where you 
   <img src="media-kit/app/play-eternal-shorts.png" alt="Eternal Shorts" width="32%">
 </p>
 
+### 📖 Flings
+
+Flings are illustrated, comic-style episodes starring Eternal AI characters. Swipe through the panels, follow each character from episode to episode, and when the story ends, continue it with her in chat.
+
+- Illustrated episodes, read panel by panel
+- A series for every character, with your reading progress saved
+- Jump from the last panel straight into a private chat
+
+[![Flings on Eternal AI](media-kit/app/flings.png)](https://eternalai.org/flings)
+
 ### ✍️ Play Studio
 
 Create and publish your own interactive character Plays. Eligible creators earn a **20% revenue share** when users subscribe to their creations.
@@ -57,7 +67,7 @@ Eternal AI is free to try. Free usage and premium interactions may have limits.
 
 1. Go to [eternalai.org](https://eternalai.org) or download the AI chat app on iOS or Android.
 2. Choose who you want to meet.
-3. Start a chat, or jump into a Play from the home feed.
+3. Start a chat, jump into a Play, or read a Flings episode.
 
 ![Scan to play on Eternal AI](media-kit/app/get-started.jpg)
 
