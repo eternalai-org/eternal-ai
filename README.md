@@ -83,7 +83,6 @@ Bring Eternal characters into your own bot, game or app over plain HTTP. The [Ch
 - Personal keys for your own use, Partner keys for apps with their own users (each end user gets their own chat history)
 - Quickstart in cURL, JavaScript and Python
 - Building with an AI agent? Give it [`SKILL.md`](https://eternalai.org/api/SKILL.md) and say what you want to build
-- Machine-readable docs: [`llms.txt`](https://eternalai.org/api/llms.txt) for AI tools, [`openapi.json`](https://eternalai.org/api/openapi.json) for code generators and API clients
 - Dashboard for keys, usage, transactions and top-ups
 - Free messages to start
 
