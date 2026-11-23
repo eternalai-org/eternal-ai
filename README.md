@@ -81,7 +81,9 @@ Eternal AI is free to try. Free usage and premium interactions may have limits.
 Bring Eternal characters into your own bot, game or app over plain HTTP. The [Character API](https://eternalai.org/api) gives you the same catalog as the app — 1,100+ characters, 2,200+ scenes and 40+ Flings comics — with one-to-one chat (text, photos and videos), interactive scenes and subscriptions.
 
 - Personal keys for your own use, Partner keys for apps with their own users (each end user gets their own chat history)
-- Quickstart in cURL, JavaScript and Python, plus `openapi.json`, `llms.txt` and a `SKILL.md` for AI agents
+- Quickstart in cURL, JavaScript and Python
+- Building with an AI agent? Give it [`SKILL.md`](https://eternalai.org/api/SKILL.md) and say what you want to build
+- Machine-readable docs: [`llms.txt`](https://eternalai.org/api/llms.txt) for AI tools, [`openapi.json`](https://eternalai.org/api/openapi.json) for code generators and API clients
 - Dashboard for keys, usage, transactions and top-ups
 - Free messages to start
 
