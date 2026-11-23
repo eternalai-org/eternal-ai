@@ -2,9 +2,9 @@
 
 ![Eternal AI](media-kit/app/banner.jpg)
 
-**Meet someone unreal.** Eternal AI is an AI companion platform and AI chatbot app where you chat one-to-one with AI characters, step into interactive story Plays, read illustrated Flings episodes, and create your own character stories. Whether you're looking for an AI girlfriend, AI boyfriend, virtual companion, or a creative AI roleplay partner — Eternal AI brings your imagination to life.
+**Meet someone unreal.** Eternal AI is an AI companion platform and AI chatbot app where you chat one-to-one with AI characters, step into interactive story Plays, read illustrated Flings episodes, hear songs your characters write for you, and create your own characters and stories. Whether you're looking for an AI girlfriend, AI boyfriend, virtual companion, or a creative AI roleplay partner — Eternal AI brings your imagination to life.
 
-[Website](https://eternalai.org) · [iOS](https://apps.apple.com/us/app/eternal-meet-someone-unreal/id6753974294) · [Android](https://eternalai.org/download/eternal.apk) · [X](https://x.com/EternalAI_) · [Discord](https://discord.gg/YphRKtSFqS) · [Reddit](https://www.reddit.com/r/EternalAI_org/)
+[Website](https://eternalai.org) · [iOS](https://apps.apple.com/us/app/eternal-meet-someone-unreal/id6753974294) · [Android](https://play.google.com/store/apps/details?id=eternalai.org.msu) · [X](https://x.com/EternalAI_) · [Discord](https://discord.gg/YphRKtSFqS) · [Reddit](https://www.reddit.com/r/EternalAI_org/)
 
 ---
 
@@ -18,6 +18,8 @@ Have private, one-to-one conversations and roleplay with AI characters, each wit
 
 **Relationships that grow.** Each connection moves through stages, from stranger to acquaintance to dating and beyond. Your character remembers your story and opens up as you get closer, like a real AI dating sim with memory.
 
+**Songs written for you.** Ask a character for a song about a photo they sent, and they write and sing one just for you. Every song is saved to **My songs**, so you can play them back any time, and the Top singers list shows who to ask next.
+
 ![Chat with AI characters on Eternal AI](media-kit/app/chat.png)
 
 ### 🎭 Play
@@ -27,7 +29,8 @@ Plays are interactive fiction experiences — creator-made AI stories where you 
 - Story chapters and branching choices
 - Narration that sets the scene, alongside the character's dialogue
 - Suggested replies when you're not sure what to say
-- Browse by theme (Night Out, Office, Domestic, Supernatural, Anime and more), or by top creators
+- Browse Featured, Trending, For you and Flings, by theme (Night Out, Office, Domestic, Supernatural, Anime and more), or by top creators
+- Start a scene with a character you're already chatting with, right from your private chat
 
 <p>
   <img src="media-kit/app/play-featured.png" alt="Featured Plays" width="32%">
@@ -45,6 +48,10 @@ Flings are illustrated, comic-style episodes starring Eternal AI characters. Swi
 
 [![Flings on Eternal AI](media-kit/app/flings.png)](https://eternalai.org/flings)
 
+### ✨ Create
+
+Describe an idea, answer a few quick questions (or tap **Choose for me**), and AI brings your new character to life — ready to chat or star in a Play.
+
 ### ✍️ Play Studio
 
 Create and publish your own interactive character Plays. Eligible creators earn a **20% revenue share** when users subscribe to their creations.
@@ -53,13 +60,28 @@ Create and publish your own interactive character Plays. Eligible creators earn 
 
 ### 📱 Everywhere
 
-Use Eternal AI on the [web](https://eternalai.org) or with the mobile app *Eternal: Meet Someone Unreal* on [iOS](https://apps.apple.com/us/app/eternal-meet-someone-unreal/id6753974294) and [Android](https://eternalai.org/download/eternal.apk).
+Use Eternal AI on the [web](https://eternalai.org) or with the mobile app *Eternal: Meet Someone Unreal* on [iOS](https://apps.apple.com/us/app/eternal-meet-someone-unreal/id6753974294) and [Android](https://play.google.com/store/apps/details?id=eternalai.org.msu) (or install the [APK](https://eternalai.org/download/eternal.apk) directly).
 
 ### 🌍 19 languages
 
 Use the app and chat with characters in your own language. Eternal AI supports English, العربية, 中文, Nederlands, Filipino, Français, Deutsch, हिन्दी, Bahasa Indonesia, Italiano, 日本語, 한국어, Bahasa Melayu, Polski, Português, Русский, Español, ไทย and Türkçe.
 
 Eternal AI is free to try. Free usage and premium interactions may have limits.
+
+---
+
+## For developers
+
+### 🧑‍💻 Character API
+
+Bring Eternal characters into your own bot, game or app over plain HTTP. The [Character API](https://eternalai.org/api) gives you the same catalog as the app — 1,100+ characters, 2,200+ scenes and 40+ Flings comics — with one-to-one chat (text, photos and videos), interactive scenes and subscriptions.
+
+- Personal keys for your own use, Partner keys for apps with their own users (each end user gets their own chat history)
+- Quickstart in cURL, JavaScript and Python, plus `openapi.json`, `llms.txt` and a `SKILL.md` for AI agents
+- Dashboard for keys, usage, transactions and top-ups
+- Free messages to start
+
+Read the [docs](https://eternalai.org/api/docs) or [get an API key](https://eternalai.org/api/keys). Looking for image-to-video? It's at [eternalai.org/video-api](https://eternalai.org/video-api).
 
 ---
 
