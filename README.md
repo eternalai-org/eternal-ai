@@ -20,6 +20,8 @@ Have private, one-to-one conversations and roleplay with AI characters, each wit
 
 **Songs written for you.** Ask a character for a song about a photo they sent, and they write and sing one just for you. Every song is saved to **My songs**, so you can play them back any time, and the Top singers list shows who to ask next.
 
+[![Songs on Eternal AI](media-kit/app/songs.png)](https://eternalai.org/songs)
+
 ![Chat with AI characters on Eternal AI](media-kit/app/chat.png)
 
 ### 🎭 Play
@@ -50,7 +52,9 @@ Flings are illustrated, comic-style episodes starring Eternal AI characters. Swi
 
 ### ✨ Create
 
-Describe an idea, answer a few quick questions (or tap **Choose for me**), and AI brings your new character to life — ready to chat or star in a Play.
+Pick a character — or a new person — and say what you want to play. Answer a few quick picks (or tap **Choose for me**), and AI writes the Play for you.
+
+[![Create on Eternal AI](media-kit/app/create.png)](https://eternalai.org/create)
 
 ### ✍️ Play Studio
 
@@ -80,6 +84,8 @@ Bring Eternal characters into your own bot, game or app over plain HTTP. The [Ch
 - Quickstart in cURL, JavaScript and Python, plus `openapi.json`, `llms.txt` and a `SKILL.md` for AI agents
 - Dashboard for keys, usage, transactions and top-ups
 - Free messages to start
+
+[![Eternal AI Character API](media-kit/app/character-api.png)](https://eternalai.org/api)
 
 Read the [docs](https://eternalai.org/api/docs) or [get an API key](https://eternalai.org/api/keys). Looking for image-to-video? It's at [eternalai.org/video-api](https://eternalai.org/video-api).
 
