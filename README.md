@@ -31,7 +31,8 @@ Plays are interactive fiction experiences — creator-made AI stories where you 
 - Story chapters and branching choices
 - Narration that sets the scene, alongside the character's dialogue
 - Suggested replies when you're not sure what to say
-- Browse Featured, Trending, For you and Flings, by theme (Night Out, Office, Domestic, Supernatural, Anime and more), or by top creators
+- Browse Featured, Trending and For you, by theme (Night Out, Office, Domestic, Supernatural, Anime and more), or by top creators
+- **Date**: browse characters who want to meet you and tap one to start a private chat
 - Start a scene with a character you're already chatting with, right from your private chat
 
 <p>
