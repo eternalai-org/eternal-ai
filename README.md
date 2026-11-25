@@ -18,11 +18,17 @@ Have private, one-to-one conversations and roleplay with AI characters, each wit
 
 **Relationships that grow.** Each connection moves through stages, from stranger to acquaintance to dating and beyond. Your character remembers your story and opens up as you get closer, like a real AI dating sim with memory.
 
-**Songs written for you.** Ask a character for a song about a photo they sent, and they write and sing one just for you. Every song is saved to **My songs**, so you can play them back any time, and the Top singers list shows who to ask next.
+![Chat with AI characters on Eternal AI](media-kit/app/chat.png)
+
+---
+
+### 🎵 Songs
+
+Ask a character for a song about a photo they sent, and they write and sing one just for you. Every song is saved to **My songs**, so you can play them back any time, and the Top singers list shows who to ask next.
 
 [![Songs on Eternal AI](media-kit/app/songs.png)](https://eternalai.org/songs)
 
-![Chat with AI characters on Eternal AI](media-kit/app/chat.png)
+---
 
 ### 🎭 Play
 
@@ -41,6 +47,8 @@ Plays are interactive fiction experiences — creator-made AI stories where you 
   <img src="media-kit/app/play-eternal-shorts.png" alt="Eternal Shorts" width="32%">
 </p>
 
+---
+
 ### 📖 Flings
 
 Flings are illustrated, comic-style episodes starring Eternal AI characters. Swipe through the panels, follow each character from episode to episode, and when the story ends, continue it with her in chat.
@@ -51,11 +59,15 @@ Flings are illustrated, comic-style episodes starring Eternal AI characters. Swi
 
 [![Flings on Eternal AI](media-kit/app/flings.png)](https://eternalai.org/flings)
 
+---
+
 ### ✨ Create
 
 Pick a character — or a new person — and say what you want to play. Answer a few quick picks (or tap **Choose for me**), and AI writes the Play for you.
 
 [![Create on Eternal AI](media-kit/app/create.png)](https://eternalai.org/create)
+
+---
 
 ### ✍️ Play Studio
 
@@ -63,9 +75,13 @@ Create and publish your own interactive character Plays. Eligible creators earn 
 
 ![Play Studio](media-kit/app/play-studio.jpg)
 
+---
+
 ### 📱 Everywhere
 
 Use Eternal AI on the [web](https://eternalai.org) or with the mobile app *Eternal: Meet Someone Unreal* on [iOS](https://apps.apple.com/us/app/eternal-meet-someone-unreal/id6753974294) and [Android](https://play.google.com/store/apps/details?id=eternalai.org.msu) (or install the [APK](https://eternalai.org/download/eternal.apk) directly).
+
+---
 
 ### 🌍 19 languages
 
