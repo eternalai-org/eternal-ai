@@ -63,7 +63,7 @@ Flings are illustrated, comic-style episodes starring Eternal AI characters. Swi
 
 ### ✨ Create
 
-Pick a character — or a new person — and say what you want to play. Answer a few quick picks (or tap **Choose for me**), and AI writes the Play for you.
+Pick a character, or create a new person and choose their look (style, hair, skin tone, body type). Say what you want to play, answer a few quick picks (or tap **Choose for me**), and AI writes the Play for you.
 
 [![Create on Eternal AI](media-kit/app/create.png)](https://eternalai.org/create)
 
